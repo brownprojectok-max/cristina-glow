@@ -1945,13 +1945,13 @@ function toggleNotifMaster() {
 // WIZARD JS
 // ═══════════════════════════════════════════
 const WIZARD_QUESTIONS = [
-  {id:'skintype',title:'¿Cómo describes tu piel normalmente?',sub:'Selecciona una opción o escribe tu respuesta',options:['Normal','Seca','Grasa','Mixta','Sensible','No lo sé']},
-  {id:'concern',title:'¿Cuál es tu principal preocupación?',sub:'Puedes seleccionar una o escribir la tuya',options:['Manchas','Arrugas y firmeza','Hidratación','Poros','Luminosidad','Acné','Uniformidad del tono']},
-  {id:'sun',title:'¿Cómo reacciona tu piel al sol?',sub:'',options:['Se enrojece con facilidad','Se broncea bien','Reacción mixta','Sin problemas']},
-  {id:'health',title:'¿Tienes alergias, sensibilidades o condiciones de salud?',sub:'Si tienes alguna enfermedad de piel, escríbela — Paulita investigará los ingredientes a evitar',options:['Ninguna','Alergia a fragancias','Alergia a alcohol','Rosácea','Eccema','Psoriasis']},
-  {id:'time',title:'¿Cuánto tiempo tienes para tu rutina diaria?',sub:'',options:['Menos de 5 minutos','Unos 10 minutos','20 minutos o más']},
-  {id:'budget',title:'¿Cuál es tu presupuesto para skincare?',sub:'',options:['Básico (productos accesibles)','Medio (farmacia y beauty)','Sin límite (marcas premium)']},
-  {id:'location',title:'¿Dónde vives?',sub:'Ciudad y país — para adaptar productos y precios reales',options:[]}
+  {id:'skintype',title:'¿Cómo describes tu piel normalmente?',sub:'Selecciona una opción o escribe tu respuesta',options:['Normal','Seca','Grasa','Mixta','Sensible','No lo sé'],multi:false},
+  {id:'concern',title:'¿Cuál es tu principal preocupación?',sub:'Puedes elegir todas las que quieras',options:['Manchas','Arrugas y firmeza','Hidratación','Poros','Luminosidad','Acné','Uniformidad del tono'],multi:true},
+  {id:'sun',title:'¿Cómo reacciona tu piel al sol?',sub:'',options:['Se enrojece con facilidad','Se broncea bien','Reacción mixta','Sin problemas'],multi:false},
+  {id:'health',title:'¿Tienes alergias, sensibilidades o condiciones de salud?',sub:'Puedes elegir varias. Si tienes alguna enfermedad específica, escríbela abajo',options:['Ninguna','Alergia a fragancias','Alergia a alcohol','Rosácea','Eccema','Psoriasis'],multi:true},
+  {id:'time',title:'¿Cuánto tiempo tienes para tu rutina diaria?',sub:'',options:['Menos de 5 minutos','Unos 10 minutos','20 minutos o más'],multi:false},
+  {id:'budget',title:'¿Cuál es tu presupuesto para skincare?',sub:'',options:['Básico (productos accesibles)','Medio (farmacia y beauty)','Sin límite (marcas premium)'],multi:false},
+  {id:'location',title:'¿Dónde vives?',sub:'Ciudad y país — para adaptar productos y precios reales',options:[],multi:false}
 ];
 let wizardStep=0, wizardAnswers={};
 
@@ -1974,30 +1974,51 @@ function renderWizardStep(){
   for(let i=0;i<total;i++) prog.innerHTML+=`<div class="progress-dot ${i<wizardStep?'done':i===wizardStep?'active':''}"></div>`;
   document.getElementById('wizard-back-btn').style.display=wizardStep>0?'block':'none';
   document.getElementById('wizard-next-btn').textContent=wizardStep===total-1?'Diseñar mi rutina ✨':'Siguiente →';
-  const saved=wizardAnswers[q.id]||'';
+  // saved: string (single) or array (multi)
+  const saved = wizardAnswers[q.id] || (q.multi ? [] : '');
   let h=`<div class="wizard-q-title">${q.title}</div>`;
   if(q.sub) h+=`<div class="wizard-q-sub">${q.sub}</div>`;
-  q.options.forEach(opt=>{ h+=`<div class="wizard-option ${saved===opt?'selected':''}" onclick="selectWizOpt(this,'${q.id}','${opt.replace(/'/g,"\'")}')">${opt}</div>`; });
-  const textVal=q.options.length===0||!q.options.includes(saved)?saved:'';
-  h+=`<textarea id="wt-${q.id}" placeholder="${q.options.length===0?'Escribe tu respuesta...':'O escribe tu propia respuesta...'}" rows="2" oninput="selectFreeText('${q.id}',this.value)" style="margin-top:10px;width:100%;border:1.5px solid rgba(61,107,79,0.2);border-radius:12px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;resize:none;outline:none;background:var(--white);color:var(--text)">${textVal}</textarea>`;
+  q.options.forEach(opt=>{
+    const isSel = q.multi ? (Array.isArray(saved) && saved.includes(opt)) : saved===opt;
+    h+=`<div class="wizard-option ${isSel?'selected':''}" onclick="selectWizOpt(this,'${q.id}','${opt.replace(/'/g,"\'")}',${q.multi})">${opt}${q.multi&&isSel?' ✓':''}</div>`;
+  });
+  const textVal = q.options.length===0 ? (saved||'') : (q.multi ? '' : (!q.options.includes(saved)?saved:''));
+  h+=`<textarea id="wt-${q.id}" placeholder="${q.options.length===0?'Escribe tu respuesta...':'O escribe tu propia respuesta...'}" rows="2" oninput="selectFreeText('${q.id}',this.value,${q.multi})" style="margin-top:10px;width:100%;border:1.5px solid rgba(61,107,79,0.2);border-radius:12px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;resize:none;outline:none;background:var(--white);color:var(--text)">${textVal}</textarea>`;
   document.getElementById('wizard-q-container').innerHTML=h;
 }
 
-function selectWizOpt(el,qid,val){
-  document.querySelectorAll('.wizard-option').forEach(o=>o.classList.remove('selected'));
-  el.classList.add('selected');
-  wizardAnswers[qid]=val;
-  const ta=document.getElementById('wt-'+qid); if(ta) ta.value='';
+function selectWizOpt(el,qid,val,multi){
+  if(multi){
+    // Toggle in array
+    if(!Array.isArray(wizardAnswers[qid])) wizardAnswers[qid]=[];
+    const idx=wizardAnswers[qid].indexOf(val);
+    if(idx>-1){ wizardAnswers[qid].splice(idx,1); el.classList.remove('selected'); el.textContent=el.textContent.replace(' ✓',''); }
+    else { wizardAnswers[qid].push(val); el.classList.add('selected'); el.textContent=val+' ✓'; }
+  } else {
+    document.querySelectorAll('.wizard-option').forEach(o=>{ o.classList.remove('selected'); o.textContent=o.textContent.replace(' ✓',''); });
+    el.classList.add('selected');
+    wizardAnswers[qid]=val;
+    const ta=document.getElementById('wt-'+qid); if(ta) ta.value='';
+  }
 }
-function selectFreeText(qid,val){
-  wizardAnswers[qid]=val;
-  document.querySelectorAll('.wizard-option').forEach(o=>o.classList.remove('selected'));
+function selectFreeText(qid,val,multi){
+  if(multi){
+    // Free text appends as extra info, doesn't deselect options
+    if(!Array.isArray(wizardAnswers[qid])) wizardAnswers[qid]=[];
+    // Store free text separately
+    wizardAnswers[qid+'_text']=val;
+  } else {
+    wizardAnswers[qid]=val;
+    document.querySelectorAll('.wizard-option').forEach(o=>{ o.classList.remove('selected'); o.textContent=o.textContent.replace(' ✓',''); });
+  }
 }
 function wizardBack(){ if(wizardStep>0){wizardStep--;renderWizardStep();} }
 async function wizardNext(){
   const q=WIZARD_QUESTIONS[wizardStep];
   const answer=wizardAnswers[q.id];
-  if(!answer||!answer.trim()){
+  const freeText=wizardAnswers[q.id+'_text']||'';
+  const hasAnswer = q.multi ? (Array.isArray(answer)&&answer.length>0)||freeText.trim() : answer&&(typeof answer==='string'?answer.trim():true);
+  if(!hasAnswer){
     const ta=document.getElementById('wt-'+q.id);
     if(ta){ta.style.borderColor='var(--rose-deep)';setTimeout(()=>{ta.style.borderColor='';},1500);}
     return;
