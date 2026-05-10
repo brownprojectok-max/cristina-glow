@@ -2199,45 +2199,61 @@ function buildStoreLinks(productName) {
 async function findStores(productName){
   openModal('store-modal');
   document.getElementById('store-modal-title').textContent = productName;
+  document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando en tiendas reales...</div>';
 
-  // Show guaranteed working links immediately
-  const baseStores = buildStoreLinks(productName);
-  renderStoreResults(baseStores, productName);
+  const loc = APP.userLocation;
+  const country = loc && loc.country ? loc.country : 'España';
+  const searchQuery = productName + ' comprar precio';
 
-  // Then enrich with AI suggestions (non-blocking)
   try {
-    const loc = APP.userLocation;
-    const locCtx = loc && loc.label ? `cerca de ${loc.label} (radio máximo 20km)` : '';
-    const country = loc && loc.country ? loc.country : '';
-    const q = encodeURIComponent(productName);
-
-    const prompt = `Recomienda tiendas específicas donde comprar "${productName}" ${locCtx}.
-Reglas:
-- Solo tiendas físicas dentro de 20km o tiendas online con envío a ${country||'ese país'}
-- Ordena por proximidad: primero las físicas más cercanas, luego online
-- Si es tienda online, distancia debe ser "Online"
-- Genera URLs de búsqueda REALES que funcionen: usa el formato https://www.tienda.com/search?q=${q} o similar
-- NO inventes URLs — usa solo dominios reales conocidos
-Responde SOLO JSON sin texto:
-[{"store":"Nombre","price":"precio aprox","url":"https://...","type":"online|fisica","distance":"Xkm o Online"}]`;
-
-    const res = await fetch('/api/ai', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-haiku-4-5-20251001', max_tokens:500, messages:[{role:'user',content:prompt}]})
-    });
+    const url = '/api/search?q=' + encodeURIComponent(searchQuery) + '&gl=' + getCountryCode(country);
+    const res = await fetch(url);
     const data = await res.json();
-    const text = data.content?.[0]?.text || '[]';
-    let aiStores = JSON.parse(text.replace(/```json|```/g,'').trim());
 
-    // Filter out bad URLs
-    aiStores = aiStores.filter(s => s.url && s.url.startsWith('https://') && s.url.length > 20);
-    // Sort: fisica first, then online
-    aiStores.sort((a,b) => a.type==='fisica' ? -1 : 1);
-
-    if (aiStores.length) {
-      renderStoreResults([...aiStores, ...baseStores], productName);
+    if (!data.items || !data.items.length) {
+      renderStoreResults(buildStoreLinks(productName), productName);
+      return;
     }
-  } catch(e) { /* keep base stores */ }
+
+    const seen = new Set();
+    const realStores = data.items
+      .filter(item => {
+        try {
+          const domain = new URL(item.link).hostname;
+          if (seen.has(domain)) return false;
+          seen.add(domain);
+          return true;
+        } catch(e) { return false; }
+      })
+      .map(item => {
+        const priceMatch = item.snippet && item.snippet.match(/[\d]+[,.][\d]{2}\s*€/);
+        const price = priceMatch ? priceMatch[0] : 'Ver precio';
+        const domain = new URL(item.link).hostname.replace('www.','');
+        const siteName = item.pagemap && item.pagemap.metatags && item.pagemap.metatags[0] && item.pagemap.metatags[0]['og:site_name'];
+        const storeName = siteName || (domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1));
+        return { store: storeName, price: price, url: item.link, type: 'online' };
+      });
+
+    const base = buildStoreLinks(productName);
+    renderStoreResults([base[0], ...realStores], productName);
+
+  } catch(e) {
+    console.error('Search error:', e);
+    renderStoreResults(buildStoreLinks(productName), productName);
+  }
+}
+
+function getCountryCode(country) {
+  const c = country.toLowerCase();
+  if (c.includes('spain') || c.includes('españa')) return 'es';
+  if (c.includes('france')) return 'fr';
+  if (c.includes('germany') || c.includes('deutschland')) return 'de';
+  if (c.includes('italy') || c.includes('italia')) return 'it';
+  if (c.includes('united kingdom') || c.includes('uk')) return 'gb';
+  if (c.includes('mexico') || c.includes('méxico')) return 'mx';
+  if (c.includes('argentina')) return 'ar';
+  if (c.includes('colombia')) return 'co';
+  return 'es';
 }
 
 function renderStoreResults(stores, productName) {
