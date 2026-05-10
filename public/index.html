@@ -449,7 +449,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
     <div id="routine-empty" style="display:none;text-align:center;padding:40px 20px">
       <div style="font-size:64px;margin-bottom:16px">🌿</div>
       <h3 style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--forest-deep);margin-bottom:10px">Aún no tienes rutina</h3>
-      <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:28px">Paulita IA analizará tu piel y diseñará una rutina personalizada de mañana y noche, con el paso 0 de limpieza siempre incluido.</p>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:28px">Paulita IA analizará tu piel y diseñará una rutina completamente personalizada de mañana y noche.</p>
       <button class="btn btn-forest" onclick="openWizard()" style="max-width:300px;margin:0 auto">✨ Diseñar mi rutina con Paulita IA</button>
     </div>
 
@@ -479,46 +479,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     WIZARD SCREEN (full page overlay)
-══════════════════════════════════════ -->
-<div id="wizard-overlay" style="display:none;position:fixed;inset:0;background:var(--cream);z-index:500;overflow-y:auto;max-width:430px;left:50%;transform:translateX(-50%)">
-  <!-- Wizard questions -->
-  <div id="wizard-questions">
-    <div style="background:linear-gradient(135deg,var(--forest-deep),var(--forest));padding:52px 24px 28px;position:relative;overflow:hidden">
-      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(242,196,206,0.15);border-radius:50%"></div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Paulita IA</div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:white;font-style:italic;margin-bottom:6px">Vamos a conocer tu piel ✨</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.75)">Responde 7 preguntas y diseñaré tu rutina perfecta</div>
-      <button onclick="closeWizard()" style="position:absolute;top:52px;right:20px;background:rgba(255,255,255,0.15);border:none;border-radius:20px;padding:6px 14px;color:white;font-size:13px;cursor:pointer">✕ Cerrar</button>
-    </div>
-    <div style="padding:24px 20px 100px">
-      <!-- Progress bar -->
-      <div style="display:flex;gap:4px;margin-bottom:24px" id="wizard-progress"></div>
 
-      <!-- Questions container -->
-      <div id="wizard-q-container"></div>
-
-      <div style="display:flex;gap:10px;margin-top:20px">
-        <button id="wizard-back-btn" onclick="wizardBack()" class="btn btn-ghost btn-sm" style="flex:1;display:none">← Atrás</button>
-        <button id="wizard-next-btn" onclick="wizardNext()" class="btn btn-forest" style="flex:2">Siguiente →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading screen -->
-  <div id="wizard-loading" style="display:none;height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px">
-    <div id="wizard-spinner" style="width:80px;height:80px;margin-bottom:24px">
-      <svg viewBox="0 0 80 80" style="animation:spin 2s linear infinite">
-        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest-pale)" stroke-width="6"/>
-        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest)" stroke-width="6"
-          stroke-dasharray="50 150" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--forest-deep);margin-bottom:8px;text-align:center">Paulita está diseñando tus rutinas</div>
-    <div style="font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6" id="wizard-loading-msg">Analizando tu tipo de piel...</div>
-  </div>
-</div>
 
 <!-- ══════════════════════════════════════
      SCREEN: IA
@@ -2016,9 +1977,12 @@ let wizardStep=0, wizardAnswers={};
 
 function openWizard(){
   wizardStep=0; wizardAnswers={};
-  document.getElementById('wizard-overlay').style.display='block';
+  const ov=document.getElementById('wizard-overlay');
+  ov.style.display='block';
   document.getElementById('wizard-questions').style.display='block';
-  document.getElementById('wizard-loading').style.display='none';
+  const ld=document.getElementById('wizard-loading');
+  ld.style.display='none';
+  ov.scrollTop=0;
   renderWizardStep();
 }
 function closeWizard(){ document.getElementById('wizard-overlay').style.display='none'; }
@@ -2064,8 +2028,9 @@ async function wizardNext(){
 
 async function generateRoutineWithAI(){
   document.getElementById('wizard-questions').style.display='none';
+  document.getElementById('wizard-questions').style.display='none';
   const ld=document.getElementById('wizard-loading');
-  ld.style.display='flex'; ld.style.flexDirection='column'; ld.style.alignItems='center'; ld.style.justifyContent='center'; ld.style.height='100vh';
+  ld.style.display='flex';
   const msgs=['Analizando tu tipo de piel...','Investigando ingredientes ideales...','Comprobando compatibilidades...','Diseñando tu rutina de mañana...','Diseñando tu rutina de noche...','Casi lista tu rutina perfecta...'];
   let mi=0;
   const intv=setInterval(()=>{ document.getElementById('wizard-loading-msg').textContent=msgs[mi++%msgs.length]; },1800);
@@ -2230,6 +2195,37 @@ function markCartItemOwned(cartIdx,period,stepIdx){
     <div class="modal-title" id="store-modal-title">Buscando tiendas...</div>
     <div id="store-results"></div>
     <button class="btn btn-ghost" style="margin-top:14px" onclick="closeModal('store-modal')">Cerrar</button>
+  </div>
+</div>
+
+<!-- ══ WIZARD OVERLAY ══ -->
+<div id="wizard-overlay" style="display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:100%;background:var(--cream);z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch">
+  <div id="wizard-questions">
+    <div style="background:linear-gradient(135deg,var(--forest-deep),var(--forest));padding:52px 24px 28px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(242,196,206,0.15);border-radius:50%"></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Paulita IA</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:white;font-style:italic;margin-bottom:6px">Vamos a conocer tu piel ✨</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.75)">Responde 7 preguntas y diseñaré tu rutina perfecta</div>
+      <button onclick="closeWizard()" style="position:absolute;top:52px;right:20px;background:rgba(255,255,255,0.15);border:none;border-radius:20px;padding:6px 14px;color:white;font-size:13px;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <div style="padding:24px 20px 100px">
+      <div style="display:flex;gap:4px;margin-bottom:24px" id="wizard-progress"></div>
+      <div id="wizard-q-container"></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button id="wizard-back-btn" onclick="wizardBack()" class="btn btn-ghost btn-sm" style="flex:1;display:none">← Atrás</button>
+        <button id="wizard-next-btn" onclick="wizardNext()" class="btn btn-forest" style="flex:2">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+  <div id="wizard-loading" style="display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:100%;background:var(--cream);flex-direction:column;align-items:center;justify-content:center;padding:40px;z-index:10000">
+    <div style="width:80px;height:80px;margin-bottom:24px">
+      <svg viewBox="0 0 80 80" style="animation:spin 2s linear infinite;width:80px;height:80px">
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest-pale)" stroke-width="6"/>
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest)" stroke-width="6" stroke-dasharray="50 150" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--forest-deep);margin-bottom:8px;text-align:center">Paulita está diseñando tus rutinas</div>
+    <div style="font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6" id="wizard-loading-msg">Analizando tu tipo de piel...</div>
   </div>
 </div>
 </body>
