@@ -2218,28 +2218,23 @@ async function findStores(productName){
     // Parse Google Shopping results from SerpAPI
     const seen = new Set();
     const stores = data.results
+      .filter(r => r.source && r.product_link)
       .filter(r => {
-        if (!r.link) return false;
-        try {
-          const domain = new URL(r.link).hostname;
-          if (seen.has(domain)) return false;
-          seen.add(domain);
-          return true;
-        } catch(e) { return false; }
+        if (seen.has(r.source)) return false;
+        seen.add(r.source);
+        return true;
       })
-      .slice(0, 5)
-      .map(r => {
-        const domain = new URL(r.link).hostname.replace('www.','');
-        const storeName = r.source || (domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1));
-        const price = r.price || 'Ver precio';
-        return {
-          store: storeName,
-          price: price,
-          url: r.link,
-          type: 'online',
-          thumbnail: r.thumbnail || null
-        };
-      });
+      .slice(0, 6)
+      .map(r => ({
+        store: r.source,
+        price: r.price || 'Ver precio',
+        url: r.product_link,
+        type: 'online',
+        thumbnail: r.thumbnail || null,
+        rating: r.rating || null,
+        reviews: r.reviews || null,
+        tag: r.tag || null
+      }));
 
     if (stores.length) {
       renderStoreResults(stores, productName);
