@@ -2272,16 +2272,15 @@ function renderStoreResults(stores, productName) {
   const seen = new Set();
   const unique = stores.filter(s => { if(seen.has(s.store)) return false; seen.add(s.store); return true; });
   el.innerHTML = unique.map(s => `
-    <a href="${s.url}" target="_blank" rel="noopener" class="store-item">
-      ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:40px;height:40px;object-fit:contain;border-radius:8px;flex-shrink:0;margin-right:4px" onerror="this.style.display='none'">` : ''}
+    <a href="${s.url}" target="_blank" rel="noopener" class="store-item" style="align-items:flex-start">
+      ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:48px;height:48px;object-fit:contain;border-radius:8px;flex-shrink:0;margin-right:10px;background:#f8f5f0" onerror="this.style.display='none'">` : ''}
       <div style="flex:1;min-width:0">
         <div class="store-name">${s.store}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-          ${s.badge ? '<span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : '🌐 Online'}
-        </div>
+        ${s.rating ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">⭐ ${s.rating} ${s.reviews ? '('+s.reviews.toLocaleString()+')' : ''}</div>` : ''}
+        ${s.tag ? `<div style="font-size:10px;color:var(--forest);font-weight:600;margin-top:2px">${s.tag}</div>` : ''}
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-        ${s.price ? `<div style="font-size:13px;font-weight:600;color:var(--forest)">${s.price}</div>` : ''}
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+        ${s.price ? `<div style="font-size:14px;font-weight:700;color:var(--forest)">${s.price}</div>` : ''}
         <div style="font-size:18px;color:var(--text-muted)">›</div>
       </div>
     </a>`).join('');
