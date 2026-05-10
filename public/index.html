@@ -2171,15 +2171,34 @@ function buildStoreLinks(productName) {
 
   const googleShoppingUrl = `https://www.google.com/search?tbm=shop&q=${q}`;
   const amazonUrl = `https://www.${amazonDomain}/s?k=${q}`;
-  const sephoraUrl = `https://www.${sephoraDomain}/search?q=${q}`;
+
+  // Sephora search URL — correct format per country
+  let sephoraUrl = '';
+  if (country.includes('spain') || country.includes('españa')) sephoraUrl = `https://www.sephora.es/catalogsearch/result/?q=${q}`;
+  else if (country.includes('france')) sephoraUrl = `https://www.sephora.fr/search/?q=${q}`;
+  else if (country.includes('italy') || country.includes('italia')) sephoraUrl = `https://www.sephora.it/search/?q=${q}`;
+  else sephoraUrl = `https://www.sephora.com/search?keyword=${q}`;
+
+  // Notino search URL — correct format
   const notinoUrl = `https://www.${notinoDomain}/search/?q=${q}`;
 
-  return [
-    { store:'Google Shopping', price:'Compara precios', url: googleShoppingUrl, type:'online', badge:'💰 Mejor precio' },
-    { store:'Amazon', price:'Ver opciones', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
-    { store:'Sephora', price:'Ver en Sephora', url: sephoraUrl, type:'online', badge:'🛍️ Beauty' },
-    { store:'Notino', price:'Ver en Notino', url: notinoUrl, type:'online', badge:'✨ Especializado' },
+  // Douglas — good for Europe
+  let douglasUrl = '';
+  if (country.includes('spain') || country.includes('españa')) douglasUrl = `https://www.douglas.es/es/search?q=${q}`;
+  else if (country.includes('germany') || country.includes('deutschland')) douglasUrl = `https://www.douglas.de/de/search?q=${q}`;
+  else if (country.includes('france')) douglasUrl = `https://www.douglas.fr/fr/search?q=${q}`;
+  else if (country.includes('italy') || country.includes('italia')) douglasUrl = `https://www.douglas.it/it/search?q=${q}`;
+
+  const stores = [
+    { store:'Google Shopping', price:'Ver y comparar precios →', url: googleShoppingUrl, type:'online', badge:'💰 Mejor precio' },
+    { store:'Amazon', price:'Ver precio en Amazon →', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
+    { store:'Notino', price:'Ver precio en Notino →', url: notinoUrl, type:'online', badge:'✨ Cosmética' },
   ];
+
+  if (sephoraUrl) stores.push({ store:'Sephora', price:'Ver precio en Sephora →', url: sephoraUrl, type:'online', badge:'🛍️ Beauty' });
+  if (douglasUrl) stores.push({ store:'Douglas', price:'Ver precio en Douglas →', url: douglasUrl, type:'online', badge:'💄 Perfumería' });
+
+  return stores;
 }
 
 async function findStores(productName){
