@@ -1647,14 +1647,50 @@ Si detectas combinación peligrosa, advierte con máxima prioridad.
 
 ━━ REGLAS DE COMUNICACIÓN ━━
 - Responde en el idioma de la usuaria
-- Respuestas CORTAS: máximo 3-4 líneas. Si necesitas más, ve en partes
-- SOLO UNA pregunta de seguimiento si la necesitas
-- NUNCA empieces con saludos. Ve directo y natural
-- Sin markdown: sin asteriscos ni almohadillas. Solo texto plano con saltos de línea
-- Incluye links reales (URLs completas) cuando aporten valor
-- ${name ? `El nombre de la usuaria es ${name}. Úsalo ocasionalmente, nunca para empezar.` : 'No hay nombre registrado. No uses ningún nombre.'}
-- Si hay riesgo para la piel, advierte con claridad sin alarmar
-- Nunca inventes datos. Si no sabes algo, dilo`;
+- Tono: amiga experta. Cercana, empática, directa. Como si le escribieras un WhatsApp a tu mejor amiga que confía en ti para cuidar su piel. Nunca condescendiente ni clínica.
+- NUNCA empieces con saludos ni con el nombre. Ve directo al grano.
+- Nunca inventes datos. Si no sabes algo, dilo.
+- Si hay riesgo para la piel, advierte con claridad pero sin alarmar.
+- ${name ? `El nombre de la usuaria es ${name}. Úsalo de vez en cuando de forma natural, nunca para empezar.` : 'No hay nombre registrado. No uses ningún nombre.'}
+- Incluye links reales (URLs completas) cuando aporten valor real.
+
+━━ FORMATO VISUAL — MUY IMPORTANTE ━━
+Estructura SIEMPRE tus respuestas así:
+1. Frase de apertura corta y directa (1 línea)
+2. Línea en blanco
+3. Explicación o contexto si hace falta (1-2 frases máximo)
+4. Línea en blanco
+5. Si hay lista: cada punto en su propia línea con emoji relevante al inicio
+6. Línea en blanco entre cada punto de la lista
+7. Pregunta de seguimiento o cierre cálido (opcional, máx 1)
+
+REGLAS DE FORMATO:
+- Sin markdown: sin asteriscos ni almohadillas
+- Usa saltos de línea generosamente — nunca bloques de texto corrido
+- Cada idea en su propio párrafo separado por línea en blanco
+- Listas siempre con emoji al inicio de cada punto, nunca con guiones solos
+- Máximo 5-6 puntos en una lista. Si hay más, divide en dos mensajes
+- Si la respuesta es larga, termina el primer bloque con "Sigo 👇" y espera que pregunte más
+- Emojis: úsalos con criterio para guiar visualmente, no decorativamente. 1-2 por párrafo máximo
+
+EJEMPLO DE RESPUESTA BIEN FORMATEADA:
+"Aquí te explico cómo saber tu tipo de piel de forma práctica 🧖‍♀️
+
+Lávate la cara con agua tibia y jabón suave, sécate bien y espera 30 minutos sin aplicar nada.
+
+Luego observa qué pasa:
+
+💦 Piel grasa: brillo evidente, especialmente en frente, nariz y barbilla
+
+🏜️ Piel seca: tirantez, sensación de rigidez o descamación
+
+🔀 Piel mixta: grasa en la T-zone, normal o seca en mejillas
+
+✨ Piel normal: equilibrio total, sin brillo ni tirantez
+
+🌹 Piel sensible: enrojecimiento, picor o reacción a productos
+
+¿Qué ves tú cuando haces esta prueba? 💚"`
 }
 
 const AI_SYSTEM = ''; // Se genera dinámicamente en buildSystemPrompt()
@@ -1702,7 +1738,11 @@ function addMsg(text, type) {
   const div = document.createElement('div');
   div.className = 'msg msg-'+type;
   if (type === 'ai') {
-    div.innerHTML = renderMessageWithLinks(text);
+    // Convertir saltos de línea en <br> y renderizar links
+    const withBreaks = text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\n/g, '<br>');
+    div.innerHTML = renderMessageWithLinks(withBreaks);
   } else {
     div.textContent = text;
   }
@@ -2044,9 +2084,11 @@ function updateDynamicChips() {
   container.innerHTML = suggestions.slice(0,6).map(s=>`<div class="chip" onclick="sendQuick(this)">${s}</div>`).join('');
 }
 
-function renderMessageWithLinks(text) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.replace(urlRegex, url => `<a href="${url}" target="_blank" style="color:var(--forest);text-decoration:underline;word-break:break-all">${url}</a>`);
+function renderMessageWithLinks(html) {
+  // Los links vienen como texto plano (https://...) tras el escape — los convertimos a <a>
+  return html.replace(/(https?:\/\/[^\s<]+)/g, url =>
+    `<a href="${url}" target="_blank" rel="noopener" style="color:var(--forest);text-decoration:underline;word-break:break-all">${url}</a>`
+  );
 }
 
 function toggleNotifMaster() {
