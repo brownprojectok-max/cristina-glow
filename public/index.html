@@ -2152,17 +2152,33 @@ function buildStoreLinks(productName) {
   else if (country.includes('united kingdom') || country.includes('uk')) amazonDomain = 'amazon.co.uk';
   else if (country.includes('mexico') || country.includes('méxico')) amazonDomain = 'amazon.com.mx';
   else if (country.includes('brazil') || country.includes('brasil')) amazonDomain = 'amazon.com.br';
+  else if (country.includes('argentina')) amazonDomain = 'amazon.com';
+  else if (country.includes('colombia')) amazonDomain = 'amazon.com';
 
-  const googleShoppingUrl = `https://www.google.com/search?tbm=shop&q=${q}${loc&&loc.city?'+'+encodeURIComponent(loc.city):''}`;
+  // Sephora local
+  let sephoraDomain = 'sephora.com';
+  if (country.includes('spain') || country.includes('españa')) sephoraDomain = 'sephora.es';
+  else if (country.includes('france')) sephoraDomain = 'sephora.fr';
+  else if (country.includes('italy') || country.includes('italia')) sephoraDomain = 'sephora.it';
+
+  // Notino — available in most of Europe and worldwide
+  let notinoDomain = 'notino.com';
+  if (country.includes('spain') || country.includes('españa')) notinoDomain = 'notino.es';
+  else if (country.includes('france')) notinoDomain = 'notino.fr';
+  else if (country.includes('germany') || country.includes('deutschland')) notinoDomain = 'notino.de';
+  else if (country.includes('italy') || country.includes('italia')) notinoDomain = 'notino.it';
+  else if (country.includes('united kingdom') || country.includes('uk')) notinoDomain = 'notino.co.uk';
+
+  const googleShoppingUrl = `https://www.google.com/search?tbm=shop&q=${q}`;
   const amazonUrl = `https://www.${amazonDomain}/s?k=${q}`;
-  const googleMapsUrl = loc && loc.lat
-    ? `https://www.google.com/maps/search/${q}/@${loc.lat},${loc.lng},13z`
-    : `https://www.google.com/maps/search/${q}`;
+  const sephoraUrl = `https://www.${sephoraDomain}/search?q=${q}`;
+  const notinoUrl = `https://www.${notinoDomain}/search/?q=${q}`;
 
   return [
     { store:'Google Shopping', price:'Compara precios', url: googleShoppingUrl, type:'online', badge:'💰 Mejor precio' },
     { store:'Amazon', price:'Ver opciones', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
-    { store:'Tiendas cercanas', price:'Ver en mapa', url: googleMapsUrl, type:'fisica', badge:'📍 Hasta 20km', distance: loc ? 'Área de 20km' : '' },
+    { store:'Sephora', price:'Ver en Sephora', url: sephoraUrl, type:'online', badge:'🛍️ Beauty' },
+    { store:'Notino', price:'Ver en Notino', url: notinoUrl, type:'online', badge:'✨ Especializado' },
   ];
 }
 
