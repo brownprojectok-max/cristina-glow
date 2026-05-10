@@ -5,7 +5,7 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { q, location } = req.query;
+  const { q, gl } = req.query;
   const apiKey = process.env.SERP_API_KEY;
 
   if (!apiKey) return res.status(500).json({ error: 'Search not configured' });
@@ -16,11 +16,9 @@ export default function handler(req, res) {
     engine: 'google_shopping',
     q: q,
     hl: 'es',
-    gl: 'es',
+    gl: gl || 'es',
     num: '6'
   });
-
-  if (location) params.set('location', location);
 
   const url = `https://serpapi.com/search.json?${params.toString()}`;
 
@@ -30,7 +28,6 @@ export default function handler(req, res) {
     response.on('end', () => {
       try {
         const parsed = JSON.parse(data);
-        // Return shopping results
         res.status(200).json({
           results: parsed.shopping_results || [],
           error: parsed.error || null
