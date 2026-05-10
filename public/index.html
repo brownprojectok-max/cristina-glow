@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Cristina Glow">
@@ -49,13 +49,12 @@ body {
 }
 .screen { display: none; min-height: 100dvh; flex-direction: column; }
 
-/* ── PANTALLA DE CHAT: layout especial para iOS PWA ── */
+/* ── PANTALLA DE CHAT ── */
 #screen-ai {
   display: none;
   flex-direction: column;
-  /* Ocupa exactamente el viewport visible, sin más */
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
 }
 #screen-ai.active {
@@ -1925,47 +1924,22 @@ function closeModalOutside(e, id) { if(e.target===document.getElementById(id)) c
 // ─────────────────────────────────────
 // CHAT HELPERS
 // ─────────────────────────────────────
-// ─── iOS PWA KEYBOARD FIX ───────────────────────────────
-// En iOS PWA el teclado NO empuja el viewport — lo encima.
-// Solución: escuchar visualViewport.resize y ajustar la altura
-// del contenedor del chat manualmente en tiempo real.
+// ─── iOS PWA KEYBOARD ───────────────────────────────────
+// Con interactive-widget=resizes-content en el meta viewport,
+// el navegador reduce dvh automáticamente cuando sube el teclado.
+// Solo necesitamos hacer scroll al fondo al hacer focus.
 
 function setupKeyboard() {
-  const screenAI = document.getElementById('screen-ai');
-  if (!screenAI) return;
-
-  function applyViewport() {
-    if (!screenAI.classList.contains('active')) return;
-    const vv = window.visualViewport;
-    if (!vv) return;
-    // Altura visible real (viewport - teclado)
-    screenAI.style.height = vv.height + 'px';
-    screenAI.style.top = vv.offsetTop + 'px';
-    // Scroll mensajes al fondo
-    const msgs = document.getElementById('chat-messages');
-    if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
-  }
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyViewport);
-    window.visualViewport.addEventListener('scroll', applyViewport);
-  }
-
-  // También al hacer focus en el input
   const input = document.getElementById('chat-input');
-  if (input) {
-    input.addEventListener('focus', () => {
-      setTimeout(applyViewport, 300);
-    });
-    input.addEventListener('blur', () => {
-      // Cuando baja el teclado, restaurar altura completa
-      setTimeout(() => {
-        if (!screenAI.classList.contains('active')) return;
-        screenAI.style.height = '';
-        screenAI.style.top = '';
-      }, 100);
-    });
-  }
+  if (!input) return;
+
+  input.addEventListener('focus', () => {
+    setTimeout(() => {
+      const msgs = document.getElementById('chat-messages');
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+      input.scrollIntoView({ block: 'nearest' });
+    }, 400);
+  });
 }
 
 function onChatInputChange(el) {
