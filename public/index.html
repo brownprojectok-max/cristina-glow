@@ -48,17 +48,20 @@ body {
   position: relative;
 }
 .screen { display: none; min-height: 100dvh; flex-direction: column; }
+
+/* ── PANTALLA DE CHAT: layout especial para iOS PWA ── */
 #screen-ai {
-  position: fixed;
-  top: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 430px;
-  height: 100%;
-  min-height: unset;
-  overflow: hidden;
-  z-index: 10;
   display: none;
   flex-direction: column;
+  /* Ocupa exactamente el viewport visible, sin más */
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
 }
+#screen-ai.active {
+  display: flex;
+}
+
 .screen.active { 
   display: flex; 
   height: 100dvh;
@@ -66,10 +69,6 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-}
-#screen-ai.active {
-  display: flex;
-  overflow: hidden;
 }
 
 /* HEADER */
@@ -375,15 +374,17 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 .store-price { font-size:13px; color:var(--forest); font-weight:600; }
 .store-arrow { font-size:16px; color:var(--text-muted); }
 
-/* Keep chat bar visible when keyboard opens */
+/* ── BARRA DE CHAT NATIVA ── */
 #chat-bar {
-  position: relative;
-  z-index: 10;
   flex-shrink: 0;
   background: var(--cream);
   border-top: 1px solid rgba(61,107,79,0.12);
   padding: 10px 16px;
+  /* Clave: padding bottom dinámico para safe area + teclado */
   padding-bottom: max(14px, env(safe-area-inset-bottom));
+  /* iOS PWA: seguir al teclado */
+  position: relative;
+  z-index: 50;
 }
 
 /* Native-style chat input bar */
@@ -408,7 +409,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   background: transparent;
   outline: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
+  font-size: 16px; /* 16px evita zoom automático en iOS */
   color: var(--text);
   resize: none;
   max-height: 100px;
@@ -416,6 +417,8 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   line-height: 1.5;
   padding: 0;
   -webkit-appearance: none;
+  /* Evitar que iOS cambie el estilo */
+  border-radius: 0;
 }
 .chat-input-bar textarea::placeholder {
   color: #b0b0b0;
@@ -437,11 +440,6 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 .chat-send-btn:active { transform: scale(0.88); }
 .chat-send-btn.empty { background: var(--cream2); box-shadow: none; }
 .chat-send-btn.empty svg { stroke: #b0b0b0; }
-
-#screen-ai.active {
-  height: 100%;
-  height: -webkit-fill-available;
-}
 </style>
 </head>
 <body>
@@ -1927,43 +1925,47 @@ function closeModalOutside(e, id) { if(e.target===document.getElementById(id)) c
 // ─────────────────────────────────────
 // CHAT HELPERS
 // ─────────────────────────────────────
-// iOS keyboard handling — barra de input siempre visible
+// ─── iOS PWA KEYBOARD FIX ───────────────────────────────
+// En iOS PWA el teclado NO empuja el viewport — lo encima.
+// Solución: escuchar visualViewport.resize y ajustar la altura
+// del contenedor del chat manualmente en tiempo real.
+
 function setupKeyboard() {
-  // Método 1: visualViewport API (iOS Safari moderno)
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', onViewportResize);
-    window.visualViewport.addEventListener('scroll', onViewportResize);
+  const screenAI = document.getElementById('screen-ai');
+  if (!screenAI) return;
+
+  function applyViewport() {
+    if (!screenAI.classList.contains('active')) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    // Altura visible real (viewport - teclado)
+    screenAI.style.height = vv.height + 'px';
+    screenAI.style.top = vv.offsetTop + 'px';
+    // Scroll mensajes al fondo
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
   }
-  // Método 2: focus/blur en el input
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', applyViewport);
+    window.visualViewport.addEventListener('scroll', applyViewport);
+  }
+
+  // También al hacer focus en el input
   const input = document.getElementById('chat-input');
   if (input) {
     input.addEventListener('focus', () => {
-      setTimeout(() => {
-        input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        scrollChatToBottom();
-      }, 350);
+      setTimeout(applyViewport, 300);
     });
     input.addEventListener('blur', () => {
-      // Restaurar cuando el teclado baja
-      const screenAI = document.getElementById('screen-ai');
-      if (screenAI) screenAI.style.height = '';
+      // Cuando baja el teclado, restaurar altura completa
+      setTimeout(() => {
+        if (!screenAI.classList.contains('active')) return;
+        screenAI.style.height = '';
+        screenAI.style.top = '';
+      }, 100);
     });
   }
-}
-
-function onViewportResize() {
-  const screenAI = document.getElementById('screen-ai');
-  if (!screenAI || !screenAI.classList.contains('active')) return;
-  const vv = window.visualViewport;
-  // Ajustar altura de la pantalla al viewport visible
-  screenAI.style.height = vv.height + 'px';
-  screenAI.style.top = vv.offsetTop + 'px';
-  scrollChatToBottom();
-}
-
-function scrollChatToBottom() {
-  const msgs = document.getElementById('chat-messages');
-  if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
 
 function onChatInputChange(el) {
