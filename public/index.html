@@ -1940,26 +1940,6 @@ function toggleNotifMaster() {
 // ─────────────────────────────────────
 // INIT
 // ─────────────────────────────────────
-(function init() {
-  // Load from localStorage first (instant)
-  const d = lsGet();
-  if (d.profile) { APP.profile={ ...APP.profile, ...d.profile }; updateProfileUI(); }
-  if (d.generatedRoutine) { APP.generatedRoutine = d.generatedRoutine; }
-  if (d.ownedProducts) { APP.ownedProducts = d.ownedProducts; }
-  if (d.shoppingCart) { APP.shoppingCart = d.shoppingCart; }
-  if (d.logs) { APP.logs=d.logs; }
-  if (d.products_list && d.products_list.list) APP.products=d.products_list.list;
-  if (d.settings) { APP.settings={...APP.settings,...d.settings}; applySettingsUI(); }
-  if (d.colors) {
-    if(d.colors.preset!==undefined) { currentPreset=d.colors.preset; applyPreset(d.colors.preset,false); }
-    else if(d.colors.custom) applyColorsObj({...COLOR_PRESETS[0],...d.colors.custom});
-  }
-  const stepsKey = 'steps_'+todayKey();
-  if (d[stepsKey]) {
-    if(d[stepsKey].morning) d[stepsKey].morning.forEach(i=>completedSteps.morning.add(i));
-    if(d[stepsKey].night) d[stepsKey].night.forEach(i=>completedSteps.night.add(i));
-  }
-
 
 // ═══════════════════════════════════════════
 // WIZARD JS
@@ -2160,6 +2140,28 @@ function markCartItemOwned(cartIdx,period,stepIdx){
   const d=lsGet(); d.ownedProducts=APP.ownedProducts; d.shoppingCart=APP.shoppingCart; lsSet(d);
   renderSteps(); renderShoppingList(); showToast('Producto añadido a tu rutina 💚');
 }
+
+
+(function init() {
+  // Load from localStorage first (instant)
+  const d = lsGet();
+  if (d.profile) { APP.profile={ ...APP.profile, ...d.profile }; updateProfileUI(); }
+  if (d.generatedRoutine) { APP.generatedRoutine = d.generatedRoutine; }
+  if (d.ownedProducts) { APP.ownedProducts = d.ownedProducts; }
+  if (d.shoppingCart) { APP.shoppingCart = d.shoppingCart; }
+  if (d.logs) { APP.logs=d.logs; }
+  if (d.products_list && d.products_list.list) APP.products=d.products_list.list;
+  if (d.settings) { APP.settings={...APP.settings,...d.settings}; applySettingsUI(); }
+  if (d.colors) {
+    if(d.colors.preset!==undefined) { currentPreset=d.colors.preset; applyPreset(d.colors.preset,false); }
+    else if(d.colors.custom) applyColorsObj({...COLOR_PRESETS[0],...d.colors.custom});
+  }
+  const stepsKey = 'steps_'+todayKey();
+  if (d[stepsKey]) {
+    if(d[stepsKey].morning) d[stepsKey].morning.forEach(i=>completedSteps.morning.add(i));
+    if(d[stepsKey].night) d[stepsKey].night.forEach(i=>completedSteps.night.add(i));
+  }
+
 
   renderChatWelcome();
   updateDynamicChips();
