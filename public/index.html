@@ -2138,60 +2138,98 @@ function renderShoppingList(){
   </div>`).join('');
 }
 
+function buildStoreLinks(productName) {
+  const q = encodeURIComponent(productName);
+  const loc = APP.userLocation;
+  const country = loc && loc.country ? loc.country.toLowerCase() : '';
+
+  // Amazon local by country
+  let amazonDomain = 'amazon.com';
+  if (country.includes('spain') || country.includes('españa')) amazonDomain = 'amazon.es';
+  else if (country.includes('france')) amazonDomain = 'amazon.fr';
+  else if (country.includes('germany') || country.includes('deutschland')) amazonDomain = 'amazon.de';
+  else if (country.includes('italy') || country.includes('italia')) amazonDomain = 'amazon.it';
+  else if (country.includes('united kingdom') || country.includes('uk')) amazonDomain = 'amazon.co.uk';
+  else if (country.includes('mexico') || country.includes('méxico')) amazonDomain = 'amazon.com.mx';
+  else if (country.includes('brazil') || country.includes('brasil')) amazonDomain = 'amazon.com.br';
+
+  const googleShoppingUrl = `https://www.google.com/search?tbm=shop&q=${q}${loc&&loc.city?'+'+encodeURIComponent(loc.city):''}`;
+  const amazonUrl = `https://www.${amazonDomain}/s?k=${q}`;
+  const googleMapsUrl = loc && loc.lat
+    ? `https://www.google.com/maps/search/${q}/@${loc.lat},${loc.lng},13z`
+    : `https://www.google.com/maps/search/${q}`;
+
+  return [
+    { store:'Google Shopping', price:'Compara precios', url: googleShoppingUrl, type:'online', badge:'💰 Mejor precio' },
+    { store:'Amazon', price:'Ver opciones', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
+    { store:'Tiendas cercanas', price:'Ver en mapa', url: googleMapsUrl, type:'fisica', badge:'📍 Hasta 20km', distance: loc ? 'Área de 20km' : '' },
+  ];
+}
+
 async function findStores(productName){
   openModal('store-modal');
   document.getElementById('store-modal-title').textContent = productName;
-  document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando tiendas...</div>';
 
-  // Build location context
-  let locationCtx = '';
-  if (APP.userLocation && APP.userLocation.label) {
-    locationCtx = `La usuaria está en ${APP.userLocation.label} (coordenadas: ${APP.userLocation.lat?.toFixed(4)}, ${APP.userLocation.lng?.toFixed(4)}).`;
-  } else if (APP.profile.location && APP.profile.location !== '–') {
-    locationCtx = `La usuaria está en ${APP.profile.location}.`;
-  } else {
-    locationCtx = 'Ubicación desconocida — recomienda tiendas online internacionales.';
-  }
+  // Show guaranteed working links immediately
+  const baseStores = buildStoreLinks(productName);
+  renderStoreResults(baseStores, productName);
 
-  const prompt = `${locationCtx}
-Busca dónde comprar "${productName}" cerca de esa ubicación. Devuelve 4-5 opciones reales: tiendas físicas cercanas si las hay, y tiendas online con envío a esa zona.
-IMPORTANTE: Cada URL debe llevar DIRECTAMENTE a la página del producto o búsqueda del producto en esa tienda, no a la página principal.
-Responde SOLO con JSON válido sin texto adicional:
-[{"store":"Nombre tienda","price":"precio estimado","url":"https://tienda.com/busqueda?q=producto","type":"online o fisica","distance":"distancia estimada si es física"}]`;
-
+  // Then enrich with AI suggestions (non-blocking)
   try {
+    const loc = APP.userLocation;
+    const locCtx = loc && loc.label ? `cerca de ${loc.label} (radio máximo 20km)` : '';
+    const country = loc && loc.country ? loc.country : '';
+    const q = encodeURIComponent(productName);
+
+    const prompt = `Recomienda tiendas específicas donde comprar "${productName}" ${locCtx}.
+Reglas:
+- Solo tiendas físicas dentro de 20km o tiendas online con envío a ${country||'ese país'}
+- Ordena por proximidad: primero las físicas más cercanas, luego online
+- Si es tienda online, distancia debe ser "Online"
+- Genera URLs de búsqueda REALES que funcionen: usa el formato https://www.tienda.com/search?q=${q} o similar
+- NO inventes URLs — usa solo dominios reales conocidos
+Responde SOLO JSON sin texto:
+[{"store":"Nombre","price":"precio aprox","url":"https://...","type":"online|fisica","distance":"Xkm o Online"}]`;
+
     const res = await fetch('/api/ai', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-haiku-4-5-20251001', max_tokens:600, messages:[{role:'user',content:prompt}]})
+      body: JSON.stringify({model:'claude-haiku-4-5-20251001', max_tokens:500, messages:[{role:'user',content:prompt}]})
     });
     const data = await res.json();
     const text = data.content?.[0]?.text || '[]';
-    let stores;
-    try { stores = JSON.parse(text.replace(/```json|```/g,'').trim()); }
-    catch(e) { stores = []; }
+    let aiStores = JSON.parse(text.replace(/```json|```/g,'').trim());
 
-    if (!stores.length) {
-      document.getElementById('store-results').innerHTML = '<div style="padding:16px;color:var(--text-muted)">No encontré tiendas. Activa la ubicación o inténtalo de nuevo.</div>';
-      return;
+    // Filter out bad URLs
+    aiStores = aiStores.filter(s => s.url && s.url.startsWith('https://') && s.url.length > 20);
+    // Sort: fisica first, then online
+    aiStores.sort((a,b) => a.type==='fisica' ? -1 : 1);
+
+    if (aiStores.length) {
+      renderStoreResults([...aiStores, ...baseStores], productName);
     }
+  } catch(e) { /* keep base stores */ }
+}
 
-    document.getElementById('store-results').innerHTML = stores.map(s => `
-      <a href="${s.url}" target="_blank" rel="noopener" class="store-item">
-        <div style="flex:1">
-          <div class="store-name">${s.store}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-            ${s.type==='online' ? '🌐 Online' : '🏪 Tienda física'}
-            ${s.distance ? ' · '+s.distance : ''}
-          </div>
+function renderStoreResults(stores, productName) {
+  const el = document.getElementById('store-results');
+  if (!el) return;
+  const seen = new Set();
+  const unique = stores.filter(s => { if(seen.has(s.store)) return false; seen.add(s.store); return true; });
+  el.innerHTML = unique.map(s => `
+    <a href="${s.url}" target="_blank" rel="noopener" class="store-item">
+      <div style="flex:1">
+        <div class="store-name">${s.store}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+          ${s.type==='online' ? '🌐 Online' : '🏪 Tienda física'}
+          ${s.distance && s.distance !== 'N/A' && s.distance !== 'Online' ? ' · '+s.distance : ''}
+          ${s.badge ? ' · <span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <div class="store-price">${s.price}</div>
-          <div class="store-arrow">→</div>
-        </div>
-      </a>`).join('');
-  } catch(e) {
-    document.getElementById('store-results').innerHTML = '<div style="padding:16px;color:var(--text-muted)">Error de conexión. Inténtalo de nuevo.</div>';
-  }
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div class="store-price" style="font-size:12px;color:var(--forest)">${s.price}</div>
+        <div class="store-arrow">→</div>
+      </div>
+    </a>`).join('');
 }
 
 function markCartItemOwned(cartIdx,period,stepIdx){
