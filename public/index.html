@@ -49,10 +49,15 @@ body {
 }
 .screen { display: none; min-height: 100dvh; flex-direction: column; }
 #screen-ai {
-  height: 100dvh;
+  position: fixed;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  height: 100%;
   min-height: unset;
-  max-height: 100dvh;
   overflow: hidden;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
 }
 .screen.active { 
   display: flex; 
@@ -63,6 +68,7 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 #screen-ai.active {
+  display: flex;
   overflow: hidden;
 }
 
@@ -371,10 +377,67 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 
 /* Keep chat bar visible when keyboard opens */
 #chat-bar {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 10;
+  flex-shrink: 0;
+  background: var(--cream);
+  border-top: 1px solid rgba(61,107,79,0.12);
+  padding: 10px 16px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
+
+/* Native-style chat input bar */
+.chat-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--white);
+  border: 1.5px solid rgba(61,107,79,0.18);
+  border-radius: 26px;
+  padding: 8px 8px 8px 16px;
+  box-shadow: 0 2px 12px rgba(61,107,79,0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.chat-input-bar:focus-within {
+  border-color: var(--forest);
+  box-shadow: 0 2px 16px rgba(61,107,79,0.15);
+}
+.chat-input-bar textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  resize: none;
+  max-height: 100px;
+  min-height: 24px;
+  line-height: 1.5;
+  padding: 0;
+  -webkit-appearance: none;
+}
+.chat-input-bar textarea::placeholder {
+  color: #b0b0b0;
+}
+.chat-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--forest), var(--forest-deep));
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+  box-shadow: 0 2px 8px rgba(61,107,79,0.3);
+}
+.chat-send-btn:active { transform: scale(0.88); }
+.chat-send-btn.empty { background: var(--cream2); box-shadow: none; }
+.chat-send-btn.empty svg { stroke: #b0b0b0; }
+
 #screen-ai.active {
   height: 100%;
   height: -webkit-fill-available;
@@ -496,21 +559,41 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
      SCREEN: IA
 ══════════════════════════════════════ -->
 <div class="screen" id="screen-ai">
-  <div class="app-header" style="flex-shrink:0">
+  <!-- Header compacto del chat -->
+  <div class="app-header" style="flex-shrink:0;padding:44px 24px 20px">
     <div class="greeting-small">Tu asesora de skincare</div>
-    <div class="greeting-name">PAULITA IA ✨</div>
-    <div class="greeting-msg">Especialista · Madrid · Piel normal</div>
+    <div class="greeting-name" style="font-size:26px">PAULITA IA ✨</div>
+    <div class="greeting-msg" id="ai-header-subtitle">Especialista · Madrid · Piel normal</div>
   </div>
-  <div id="ai-body" style="flex:1;display:flex;flex-direction:column;padding:12px 20px 0;min-height:0;overflow:hidden;padding-bottom:70px">
-    <div class="quick-chips" id="quick-chips" style="flex-shrink:0;margin-bottom:8px"></div>
-    <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:10px;padding-bottom:8px;min-height:0">
-      
+
+  <!-- Área scrollable: chips + mensajes -->
+  <div id="ai-body" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+    <!-- Chips sugeridos -->
+    <div style="padding:10px 16px 0;flex-shrink:0">
+      <div class="quick-chips" id="quick-chips"></div>
     </div>
-    <div id="chat-bar" style="flex-shrink:0;padding:10px 0 12px;border-top:1px solid rgba(61,107,79,0.1);background:var(--cream)">
-      <div style="display:flex;gap:10px;align-items:flex-end">
-        <textarea class="chat-input" id="chat-input" placeholder="Pregúntame lo que quieras..." rows="1" onkeydown="handleChatKey(event)" oninput="autoResize(this);hideChips()"></textarea>
-        <button class="send-btn" onclick="sendMessage()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
-      </div>
+    <!-- Mensajes -->
+    <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:10px;padding:8px 16px 12px;min-height:0">
+      <div id="chat-welcome" class="msg msg-ai" style="align-self:flex-start"></div>
+    </div>
+  </div>
+
+  <!-- Barra de input FIJA — nativa de la app -->
+  <div id="chat-bar">
+    <div class="chat-input-bar">
+      <textarea
+        id="chat-input"
+        placeholder="Pregúntame lo que quieras..."
+        rows="1"
+        onkeydown="handleChatKey(event)"
+        oninput="autoResize(this);onChatInputChange(this)"
+      ></textarea>
+      <button class="chat-send-btn empty" id="send-btn" onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
     </div>
   </div>
 </div>
@@ -1570,6 +1653,7 @@ async function sendMessage() {
   addMsg(msg, 'user');
   input.value='';
   autoResize(input);
+  onChatInputChange(input);
   // Hide chips permanently after first message
   const chips = document.getElementById('quick-chips');
   if (chips) { chips.style.display='none'; }
@@ -1593,9 +1677,6 @@ async function sendMessage() {
     const reply = data.content?.[0]?.text || 'Lo siento, hubo un problema. Intenta de nuevo 💚';
     addMsg(reply, 'ai');
     chatHistory.push({ role:'assistant', content:reply });
-    // Show nav again after AI responds
-    const nav2 = document.querySelector('.bottom-nav');
-    if (nav2) nav2.style.transform = '';
   } catch(e) {
     thinking.remove();
     console.error('AI error:', e);
@@ -1846,52 +1927,95 @@ function closeModalOutside(e, id) { if(e.target===document.getElementById(id)) c
 // ─────────────────────────────────────
 // CHAT HELPERS
 // ─────────────────────────────────────
+// iOS keyboard handling — barra de input siempre visible
+function setupKeyboard() {
+  // Método 1: visualViewport API (iOS Safari moderno)
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', onViewportResize);
+    window.visualViewport.addEventListener('scroll', onViewportResize);
+  }
+  // Método 2: focus/blur en el input
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.addEventListener('focus', () => {
+      setTimeout(() => {
+        input.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        scrollChatToBottom();
+      }, 350);
+    });
+    input.addEventListener('blur', () => {
+      // Restaurar cuando el teclado baja
+      const screenAI = document.getElementById('screen-ai');
+      if (screenAI) screenAI.style.height = '';
+    });
+  }
+}
+
+function onViewportResize() {
+  const screenAI = document.getElementById('screen-ai');
+  if (!screenAI || !screenAI.classList.contains('active')) return;
+  const vv = window.visualViewport;
+  // Ajustar altura de la pantalla al viewport visible
+  screenAI.style.height = vv.height + 'px';
+  screenAI.style.top = vv.offsetTop + 'px';
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  const msgs = document.getElementById('chat-messages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function onChatInputChange(el) {
+  // Mostrar/ocultar chips
+  const chips = document.getElementById('quick-chips');
+  if (chips) {
+    if (el.value.trim()) {
+      chips.style.opacity = '0';
+      chips.style.height = '0';
+      chips.style.overflow = 'hidden';
+      chips.style.marginBottom = '0';
+    } else {
+      chips.style.opacity = '1';
+      chips.style.height = '';
+      chips.style.overflow = '';
+      chips.style.marginBottom = '8px';
+    }
+  }
+  // Cambiar color del botón enviar
+  const btn = document.getElementById('send-btn');
+  if (btn) {
+    if (el.value.trim()) btn.classList.remove('empty');
+    else btn.classList.add('empty');
+  }
+}
+
 function hideChips() {
   const chips = document.getElementById('quick-chips');
   if (chips) { chips.style.opacity='0'; chips.style.height='0'; chips.style.overflow='hidden'; chips.style.marginBottom='0'; }
-  // Ocultar bottom nav al escribir en chat
-  const nav = document.querySelector('.bottom-nav');
-  if (nav && document.getElementById('screen-ai').classList.contains('active')) {
-    nav.style.transform = 'translateY(100%)';
-  }
 }
 
 function showChips() {
   const input = document.getElementById('chat-input');
   if (!input || !input.value.trim()) {
     const chips = document.getElementById('quick-chips');
-    if (chips) { chips.style.opacity='1'; chips.style.height=''; chips.style.overflow=''; chips.style.marginBottom='12px'; }
+    if (chips) { chips.style.opacity='1'; chips.style.height=''; chips.style.overflow=''; chips.style.marginBottom='8px'; }
   }
-  // Mostrar bottom nav de nuevo
-  const nav = document.querySelector('.bottom-nav');
-  if (nav) nav.style.transform = '';
-}
-
-
-// iOS keyboard handling
-function setupKeyboard() {
-  if (!window.visualViewport) return;
-  window.visualViewport.addEventListener('resize', () => {
-    const screen = document.getElementById('screen-ai');
-    if (!screen || !screen.classList.contains('active')) return;
-    const body = document.getElementById('ai-body');
-    if (!body) return;
-    const kbHeight = window.innerHeight - window.visualViewport.height;
-    if (kbHeight > 100) {
-      body.style.paddingBottom = kbHeight + 'px';
-      const msgs = document.getElementById('chat-messages');
-      if (msgs) msgs.scrollTop = msgs.scrollHeight;
-    } else {
-      body.style.paddingBottom = '0';
-    }
-  });
 }
 function renderChatWelcome() {
   const el = document.getElementById('chat-welcome');
   if (!el) return;
   const h = new Date().getHours();
   let saludo = h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
-  el.textContent = saludo + ' Cristina 🌿 Soy tu asesora personal de skincare. Conozco toda tu rutina y productos. ¿En qué te ayudo hoy? 💚';
+  el.textContent = saludo + ' 🌿 Soy Paulita, tu asesora personal de skincare. Conozco toda tu rutina y productos. ¿En qué te ayudo hoy? 💚';
+  // Actualizar subtítulo del header con datos del perfil
+  const sub = document.getElementById('ai-header-subtitle');
+  if (sub) {
+    const parts = [];
+    if (APP.profile.location && APP.profile.location !== '–' && APP.profile.location) parts.push(APP.profile.location.split(',')[0]);
+    if (APP.profile.skintype && APP.profile.skintype !== '–' && APP.profile.skintype) parts.push('Piel ' + APP.profile.skintype.toLowerCase());
+    sub.textContent = parts.length ? 'Especialista · ' + parts.join(' · ') : 'Especialista en skincare';
+  }
 }
 
 function updateDynamicChips() {
