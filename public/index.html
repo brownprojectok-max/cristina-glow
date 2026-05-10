@@ -2202,10 +2202,11 @@ async function findStores(productName){
   document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando precios reales...</div>';
 
   const loc = APP.userLocation;
-  const location = loc && loc.label ? loc.label : 'Spain';
+
 
   try {
-    const url = '/api/search?q=' + encodeURIComponent(productName) + '&location=' + encodeURIComponent(location);
+    const gl = getCountryCode(loc && loc.country ? loc.country : 'España');
+    const url = '/api/search?q=' + encodeURIComponent(productName) + '&gl=' + gl;
     const res = await fetch(url);
     const data = await res.json();
 
