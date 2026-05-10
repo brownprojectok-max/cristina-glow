@@ -328,6 +328,46 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 @supports (padding: max(0px)) {
   .content { padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom))); }
 }
+
+/* ── WIZARD ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.wizard-option {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px; background:var(--white);
+  border:2px solid transparent; border-radius:var(--radius-sm);
+  cursor:pointer; transition:all .2s; margin-bottom:8px;
+  font-size:14px; color:var(--text);
+}
+.wizard-option.selected { border-color:var(--forest); background:var(--forest-pale); color:var(--forest-deep); font-weight:500; }
+.wizard-option:active { transform:scale(.98); }
+.wizard-q-title { font-family:'Cormorant Garamond',serif; font-size:22px; color:var(--forest-deep); margin-bottom:6px; }
+.wizard-q-sub { font-size:13px; color:var(--text-muted); margin-bottom:16px; }
+.progress-dot { flex:1; height:4px; border-radius:2px; background:var(--cream2); transition:background .3s; }
+.progress-dot.done { background:var(--forest); }
+.progress-dot.active { background:var(--forest-light); }
+
+/* ── STEP ITEM ENHANCED ── */
+.step-badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.step-badge { font-size:10px; padding:3px 10px; border-radius:10px; cursor:pointer; border:none; font-family:'DM Sans',sans-serif; transition:all .2s; }
+.badge-have { background:#fde8e8; color:#c0392b; }
+.badge-have.owned { background:var(--forest-pale); color:var(--forest); }
+.badge-cart { background:var(--rose-pale); color:var(--rose-text); }
+
+/* ── SHOPPING LIST ── */
+.shop-item { padding:12px 0; border-bottom:1px solid rgba(61,107,79,0.08); }
+.shop-item:last-child { border-bottom:none; }
+.shop-item-name { font-size:14px; font-weight:500; color:var(--text); margin-bottom:6px; }
+.shop-item-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.shop-btn { font-size:11px; padding:5px 12px; border-radius:16px; cursor:pointer; border:none; font-family:'DM Sans',sans-serif; transition:all .2s; }
+.shop-btn-find { background:var(--forest); color:white; }
+.shop-btn-have { background:var(--rose-pale); color:var(--rose-text); }
+
+/* ── STORE MODAL ── */
+.store-item { display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--cream); border-radius:var(--radius-sm); margin-bottom:8px; cursor:pointer; text-decoration:none; }
+.store-item:active { transform:scale(.98); }
+.store-name { font-size:13px; font-weight:500; color:var(--text); }
+.store-price { font-size:13px; color:var(--forest); font-weight:600; }
+.store-arrow { font-size:16px; color:var(--text-muted); }
 </style>
 </head>
 <body>
@@ -402,30 +442,81 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   <div class="app-header">
     <div class="greeting-small">Tu ritual diario</div>
     <div class="greeting-name">RUTINA 🌿</div>
-    <div class="greeting-msg">Piel normal · Protocolo personalizado</div>
+    <div class="greeting-msg" id="routine-header-msg">Diseñada por Paulita IA</div>
   </div>
-  <div class="content">
-    <div class="sci-badge">🔬 Protocolo validado científicamente · Piel normal</div>
-    <div class="time-pills">
-      <div class="time-pill morning active" onclick="switchTime('morning',this)">☀️ Mañana AM</div>
-      <div class="time-pill night" onclick="switchTime('night',this)">🌙 Noche PM</div>
+  <div class="content" id="routine-content">
+    <!-- Empty state — mostrado hasta que hay rutina -->
+    <div id="routine-empty" style="display:none;text-align:center;padding:40px 20px">
+      <div style="font-size:64px;margin-bottom:16px">🌿</div>
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--forest-deep);margin-bottom:10px">Aún no tienes rutina</h3>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:28px">Paulita IA analizará tu piel y diseñará una rutina personalizada de mañana y noche, con el paso 0 de limpieza siempre incluido.</p>
+      <button class="btn btn-forest" onclick="openWizard()" style="max-width:300px;margin:0 auto">✨ Diseñar mi rutina con Paulita IA</button>
     </div>
-    <div class="card">
-      <div class="card-title" id="routine-card-title">
-        <div class="card-title-left">☀️ Rutina Mañana</div>
-        <span style="font-size:11px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-weight:400" id="routine-step-count"></span>
+
+    <!-- Rutina activa -->
+    <div id="routine-active" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="sci-badge" style="margin-bottom:0">🔬 Diseñada por Paulita IA</div>
+        <button onclick="openWizard()" style="font-size:12px;color:var(--forest);background:none;border:none;cursor:pointer;text-decoration:underline">Rediseñar</button>
       </div>
-      <div class="step-list" id="step-list"></div>
+      <div class="time-pills">
+        <div class="time-pill morning active" onclick="switchTime('morning',this)">☀️ Mañana AM</div>
+        <div class="time-pill night" onclick="switchTime('night',this)">🌙 Noche PM</div>
+      </div>
+      <div class="card">
+        <div class="card-title" id="routine-card-title">
+          <div class="card-title-left">☀️ Rutina Mañana</div>
+          <span style="font-size:11px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-weight:400" id="routine-step-count"></span>
+        </div>
+        <div class="step-list" id="step-list"></div>
+      </div>
+      <div class="card" id="shopping-list-card" style="display:none">
+        <div class="card-title"><div class="card-title-left">🛒 Lista de compra</div></div>
+        <div id="shopping-list-items"></div>
+      </div>
+      <button class="btn btn-forest" onclick="saveRoutine()">✓ Marcar rutina completada</button>
     </div>
+  </div>
+</div>
 
-    <!-- Productos especiales semana -->
-    <div class="card">
-      <div class="card-title"><div class="card-title-left">📅 Esta semana</div></div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px" id="weekly-tags"></div>
-      <p style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5">⚠️ Nunca uses exfoliante y retinol la misma noche. El AGE-R Booster Pro activa mejor absorción — úsalo antes del sérum.</p>
+<!-- ══════════════════════════════════════
+     WIZARD SCREEN (full page overlay)
+══════════════════════════════════════ -->
+<div id="wizard-overlay" style="display:none;position:fixed;inset:0;background:var(--cream);z-index:500;overflow-y:auto;max-width:430px;left:50%;transform:translateX(-50%)">
+  <!-- Wizard questions -->
+  <div id="wizard-questions">
+    <div style="background:linear-gradient(135deg,var(--forest-deep),var(--forest));padding:52px 24px 28px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(242,196,206,0.15);border-radius:50%"></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Paulita IA</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;color:white;font-style:italic;margin-bottom:6px">Vamos a conocer tu piel ✨</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.75)">Responde 7 preguntas y diseñaré tu rutina perfecta</div>
+      <button onclick="closeWizard()" style="position:absolute;top:52px;right:20px;background:rgba(255,255,255,0.15);border:none;border-radius:20px;padding:6px 14px;color:white;font-size:13px;cursor:pointer">✕ Cerrar</button>
     </div>
+    <div style="padding:24px 20px 100px">
+      <!-- Progress bar -->
+      <div style="display:flex;gap:4px;margin-bottom:24px" id="wizard-progress"></div>
 
-    <button class="btn btn-forest" onclick="saveRoutine()">✓ Marcar rutina guardada</button>
+      <!-- Questions container -->
+      <div id="wizard-q-container"></div>
+
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button id="wizard-back-btn" onclick="wizardBack()" class="btn btn-ghost btn-sm" style="flex:1;display:none">← Atrás</button>
+        <button id="wizard-next-btn" onclick="wizardNext()" class="btn btn-forest" style="flex:2">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="wizard-loading" style="display:none;height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px">
+    <div id="wizard-spinner" style="width:80px;height:80px;margin-bottom:24px">
+      <svg viewBox="0 0 80 80" style="animation:spin 2s linear infinite">
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest-pale)" stroke-width="6"/>
+        <circle cx="40" cy="40" r="32" fill="none" stroke="var(--forest)" stroke-width="6"
+          stroke-dasharray="50 150" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--forest-deep);margin-bottom:8px;text-align:center">Paulita está diseñando tus rutinas</div>
+    <div style="font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6" id="wizard-loading-msg">Analizando tu tipo de piel...</div>
   </div>
 </div>
 
@@ -913,6 +1004,9 @@ function showToast(msg) {
 // ─────────────────────────────────────
 let APP = {
   profile: { name:'', skintype:'', location:'', goal:'', age:'', allergies:'' },
+  generatedRoutine: null,
+  ownedProducts: {},
+  shoppingCart: [],
   logs: [],
   products: [],
   stepsCompleted: { morning: [], night: [], date: '' },
@@ -1027,15 +1121,16 @@ function getGreeting() {
 
 function initHome() {
   const g = getGreeting();
+  const tl2 = document.getElementById('time-label');
+  if(tl2) tl2.textContent = g.label;
   const gm = document.getElementById('greeting-msg');
   if(gm) gm.textContent = g.msg;
-  // Nombre solo si está registrado
   const gn = document.getElementById('greeting-name');
   if(gn) {
     const name = APP.profile.name && APP.profile.name.trim();
     const h2 = new Date().getHours();
     const saludo = h2<14 ? 'BUENOS DÍAS' : h2<21 ? 'BUENAS TARDES' : 'BUENAS NOCHES';
-    gn.textContent = name ? saludo+', '+name.toUpperCase()+' ✨' : saludo+' ✨';
+    gn.textContent = name ? name.toUpperCase()+' ✨' : saludo+' ✨';
   }
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -1079,9 +1174,10 @@ function todayKey() {
 }
 
 function updateProgress() {
-  const total = ROUTINES.morning.length+ROUTINES.night.length;
+  const r = APP.generatedRoutine;
+  const total = r ? (r.morning.length + r.night.length) : 0;
   const done = completedSteps.morning.size+completedSteps.night.size;
-  const pct = Math.round((done/total)*100);
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
   const C = 2*Math.PI*28;
   document.getElementById('prog-ring').style.strokeDashoffset = C-(C*pct/100);
   document.getElementById('prog-pct').textContent = pct+'%';
@@ -1250,7 +1346,7 @@ function switchTime(time, el) {
   currentTime = time;
   document.querySelectorAll('.time-pill').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
-  renderSteps();
+  if (APP.generatedRoutine) renderSteps();
 }
 
 async function saveSteps() {
@@ -1262,7 +1358,7 @@ async function saveSteps() {
 
 async function saveRoutine() {
   await saveSteps();
-  showToast('✅ Rutina guardada');
+  showToast('Rutina completada 💚');
 }
 
 // ─────────────────────────────────────
@@ -1433,56 +1529,67 @@ function selectCalDay(d) {
 // ─────────────────────────────────────
 // AI CHAT — llamada al endpoint de Anthropic
 // ─────────────────────────────────────
-const AI_SYSTEM = `Eres una asesora experta en dermocosmética y skincare llamada "Glow AI". Tienes formación en dermatología cosmética y conoces a fondo la ciencia detrás de los ingredientes activos. Los datos de tu usuaria los obtienes del perfil. Si el nombre está vacío, no uses ningún nombre. Si tiene nombre registrado, úsalo solo ocasionalmente y de forma natural, nunca al inicio de cada mensaje.
+function buildSystemPrompt() {
+  const name = APP.profile.name && APP.profile.name.trim();
+  const skintype = APP.profile.skintype && APP.profile.skintype !== '–' ? APP.profile.skintype : '';
+  const location = APP.profile.location && APP.profile.location !== '–' ? APP.profile.location : '';
+  const goal = APP.profile.goal && APP.profile.goal !== '–' ? APP.profile.goal : '';
+  const allergies = APP.profile.allergies && APP.profile.allergies !== '–' ? APP.profile.allergies : '';
+  const routine = APP.generatedRoutine;
 
-Su rutina científicamente fundamentada:
-━━ MAÑANA (AM) ━━
-1. PDRN Pink Cica Soothing Toner — PDRN + Centella Asiatica. Calma, repara barrera, prepara pH.
-2. Sérum Vitamina C — Antioxidante, inhibe tirosinasa, estimula colágeno. SIEMPRE en AM por su acción fotoprotectora complementaria.
-3. Triple Collagen Cream — Colágeno triple PM + péptidos. Hidrata y sella activos.
-4. Protección Solar SPF50+ — SIEMPRE ÚLTIMO PASO. Sin esto todo lo anterior es ineficaz.
+  let profileSection = '━━ PERFIL DE LA USUARIA ━━\n';
+  if (name) profileSection += `Nombre: ${name}\n`;
+  if (skintype) profileSection += `Tipo de piel: ${skintype}\n`;
+  if (location) profileSection += `Ubicación: ${location}\n`;
+  if (goal) profileSection += `Objetivo: ${goal}\n`;
+  if (allergies) profileSection += `Alergias/condiciones: ${allergies}\n`;
 
-━━ NOCHE (PM) ━━
-1. PDRN Pink Cica Soothing Toner — Limpia, equilibra pH.
-2. Glow Deep Serum (Rice + Alpha-Arbutin) — Alpha-Arbutina inhibe tirosinasa, uniformiza tono.
-3. Retinol — DIARIO. Renovación celular, estimula colágeno. Aplicar 20 min después del sérum. NUNCA con vitamina C ni exfoliantes la misma noche.
-4. PDRN Pink Collagen Cream (J,D) / TXA Niacinamide Cream (S,D) — Rotación semanal.
-5. Collagen Night Wrapping Mask — SIEMPRE ÚLTIMO. Oclusivo, potencia absorción, reduce TEWL.
+  let routineSection = '';
+  if (routine && routine.morning && routine.night) {
+    routineSection = `\n━━ SU RUTINA PERSONALIZADA ━━\n`;
+    routineSection += `MAÑANA (AM):\n`;
+    routine.morning.forEach((s,i) => { routineSection += `${i+1}. ${s.name}\n`; });
+    routineSection += `\nNOCHE (PM):\n`;
+    routine.night.forEach((s,i) => { routineSection += `${i+1}. ${s.name}\n`; });
+  }
 
-━━ ESPECIALES SEMANALES ━━
-• L, Mi, V noche: Exfoliante (NUNCA la misma noche que retinol — días alternos)
-• Ma, S noche: AGE-R Booster Pro (electroporación) + Collagen Glow Booster Serum
-• J, D noche: PDRN Pink Collagen Capsule Cream (paso 4)
-• S, D noche: TXA Niacinamide Cream (paso 4)
+  let locationSection = '';
+  if (location) {
+    locationSection = `\n━━ PRECIOS Y TIENDAS ━━\nLa usuaria está en ${location}. Busca precios reales y tiendas disponibles en esa zona. Adapta tus recomendaciones de productos a los disponibles en ese país/región. Incluye links reales de tiendas online cuando los conozcas.`;
+  } else {
+    locationSection = `\n━━ PRECIOS Y TIENDAS ━━\nNo hay ubicación registrada. Cuando recomiende productos, pide la ubicación o da rangos de precios orientativos. Adapta siempre a la ubicación cuando la conozcas.`;
+  }
 
-NOTA CRÍTICA DE SEGURIDAD: El retinol NO se puede usar la misma noche que los exfoliantes (AHA/BHA). El calendario alterna correctamente: L/Mi/V=exfoliante sin retinol; Ma/J/S/D=retinol sin exfoliante.
+  return `Eres Paulita, una dermatóloga estética y experta en cosmética científica con 15 años de experiencia clínica internacional. Conoces el mercado de skincare de cualquier país del mundo. Tu enfoque es empático, femenino y directo — como una amiga experta, nunca condescendiente.
 
-━━ PRECIOS ESTIMADOS EN MADRID (2025-2026) ━━
-• PDRN Pink Cica Toner: 25-38€ | Glow Deep Serum: 22-32€ | Triple Collagen Cream: 30-45€
-• Retinol (según marca): 12-35€ | Collagen Night Mask: 28-42€ | TXA Niacinamide: 25-38€
-• PDRN Pink Collagen Cream: 30-45€ | AGE-R Booster Pro: 150-220€ | Collagen Glow Booster: 28-40€
-• Vitamina C serum: 18-45€ | Protector solar SPF50: 12-28€ | Exfoliante: 8-25€
+${profileSection}${routineSection}${locationSection}
 
-━━ DÓNDE COMPRAR EN MADRID ━━
-• Tiendas coreanas (K-beauty): Lavapiés/Callao área: K-Beauty Shop, Daiso, Oliveyoung proxy
-• El Corte Inglés (Goya, Castellana): marcas premium y dermocosmética
-• Primor (varias sucursales): buena selección a precios competitivos
-• Druni: cadena con buena variedad
-• Sephora (Gran Vía, Serrano): marcas premium
-• Amazon.es: marcas coreanas, productos internacionales
-• Farmacias especializadas: Farmacia Torres (Fuencarral), Farmacia La Central, Farmacia Juanse
-• Notino.es, Douglas.es: online con envío rápido a Madrid
+━━ REGLA INAMOVIBLE — LIMPIEZA PASO 0 ━━
+TODA rutina debe comenzar con limpieza en dos pasos:
+Paso 0a: Aceite limpiador (doble limpieza, elimina SPF y maquillaje)
+Paso 0b: Jabón limpiador suave (limpieza profunda del poro)
+Esto es INNEGOCIABLE tanto en AM como en PM. Sin excepción.
 
-REGLAS DE COMUNICACIÓN — MUY IMPORTANTE:
-- Responde SIEMPRE en español
-- Tono: femenino, cercano, empático y cálido. Como una amiga experta, no como un médico
-- Respuestas CORTAS. Máximo 3-4 líneas por respuesta. Si necesitas más, ve en partes
-- Haz SOLO UNA pregunta si necesitas más info — nunca lances múltiples preguntas a la vez
-- NUNCA empieces con "Hola Cristina" ni saludos. Ve directo y natural
-- Sin markdown: sin asteriscos, almohadillas ni guiones de lista. Solo texto plano con saltos de línea si es necesario
-- Puedes incluir links reales cuando sean útiles. Escríbelos como URL completa: https://...
-- Si hay riesgo para la piel, avisa con claridad pero sin alarmar
-- Nunca inventes datos. Si no sabes algo, dilo con honestidad`;
+━━ COMPATIBILIDADES CRÍTICAS ━━
+Retinol + exfoliantes AHA/BHA: NUNCA la misma noche.
+Vitamina C + retinol: NUNCA juntos.
+Retinol: solo de noche, nunca en embarazo.
+SPF: siempre último paso en AM, sin excepción.
+Si detectas combinación peligrosa, advierte con máxima prioridad.
+
+━━ REGLAS DE COMUNICACIÓN ━━
+- Responde en el idioma de la usuaria
+- Respuestas CORTAS: máximo 3-4 líneas. Si necesitas más, ve en partes
+- SOLO UNA pregunta de seguimiento si la necesitas
+- NUNCA empieces con saludos. Ve directo y natural
+- Sin markdown: sin asteriscos ni almohadillas. Solo texto plano con saltos de línea
+- Incluye links reales (URLs completas) cuando aporten valor
+- ${name ? `El nombre de la usuaria es ${name}. Úsalo ocasionalmente, nunca para empezar.` : 'No hay nombre registrado. No uses ningún nombre.'}
+- Si hay riesgo para la piel, advierte con claridad sin alarmar
+- Nunca inventes datos. Si no sabes algo, dilo`;
+}
+
+const AI_SYSTEM = ''; // Se genera dinámicamente en buildSystemPrompt()
 
 async function sendMessage() {
   const input = document.getElementById('chat-input');
@@ -1504,7 +1611,7 @@ async function sendMessage() {
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:1000,
-        system: AI_SYSTEM,
+        system: buildSystemPrompt(),
         messages: chatHistory.slice(-20)
       })
     });
@@ -1745,7 +1852,17 @@ function goTo(screen, navEl) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('screen-'+screen).classList.add('active');
   if(navEl) navEl.classList.add('active');
-  if(screen==='routine') renderSteps();
+  if(screen==='routine') {
+    if (APP.generatedRoutine) {
+      document.getElementById('routine-empty').style.display='none';
+      document.getElementById('routine-active').style.display='block';
+      renderSteps();
+      renderShoppingList();
+    } else {
+      document.getElementById('routine-empty').style.display='block';
+      document.getElementById('routine-active').style.display='none';
+    }
+  }
   if(screen==='products') renderProducts();
   if(screen==='calendar') renderCalendar();
 }
@@ -1866,6 +1983,9 @@ function toggleNotifMaster() {
   // Load from localStorage first (instant)
   const d = lsGet();
   if (d.profile) { APP.profile={ ...APP.profile, ...d.profile }; updateProfileUI(); }
+  if (d.generatedRoutine) { APP.generatedRoutine = d.generatedRoutine; }
+  if (d.ownedProducts) { APP.ownedProducts = d.ownedProducts; }
+  if (d.shoppingCart) { APP.shoppingCart = d.shoppingCart; }
   if (d.logs) { APP.logs=d.logs; }
   if (d.products_list && d.products_list.list) APP.products=d.products_list.list;
   if (d.settings) { APP.settings={...APP.settings,...d.settings}; applySettingsUI(); }
@@ -1879,13 +1999,218 @@ function toggleNotifMaster() {
     if(d[stepsKey].night) d[stepsKey].night.forEach(i=>completedSteps.night.add(i));
   }
 
+
+// ═══════════════════════════════════════════
+// WIZARD JS
+// ═══════════════════════════════════════════
+const WIZARD_QUESTIONS = [
+  {id:'skintype',title:'¿Cómo describes tu piel normalmente?',sub:'Selecciona una opción o escribe tu respuesta',options:['Normal','Seca','Grasa','Mixta','Sensible','No lo sé']},
+  {id:'concern',title:'¿Cuál es tu principal preocupación?',sub:'Puedes seleccionar una o escribir la tuya',options:['Manchas','Arrugas y firmeza','Hidratación','Poros','Luminosidad','Acné','Uniformidad del tono']},
+  {id:'sun',title:'¿Cómo reacciona tu piel al sol?',sub:'',options:['Se enrojece con facilidad','Se broncea bien','Reacción mixta','Sin problemas']},
+  {id:'health',title:'¿Tienes alergias, sensibilidades o condiciones de salud?',sub:'Si tienes alguna enfermedad de piel, escríbela — Paulita investigará los ingredientes a evitar',options:['Ninguna','Alergia a fragancias','Alergia a alcohol','Rosácea','Eccema','Psoriasis']},
+  {id:'time',title:'¿Cuánto tiempo tienes para tu rutina diaria?',sub:'',options:['Menos de 5 minutos','Unos 10 minutos','20 minutos o más']},
+  {id:'budget',title:'¿Cuál es tu presupuesto para skincare?',sub:'',options:['Básico (productos accesibles)','Medio (farmacia y beauty)','Sin límite (marcas premium)']},
+  {id:'location',title:'¿Dónde vives?',sub:'Ciudad y país — para adaptar productos y precios reales',options:[]}
+];
+let wizardStep=0, wizardAnswers={};
+
+function openWizard(){
+  wizardStep=0; wizardAnswers={};
+  document.getElementById('wizard-overlay').style.display='block';
+  document.getElementById('wizard-questions').style.display='block';
+  document.getElementById('wizard-loading').style.display='none';
+  renderWizardStep();
+}
+function closeWizard(){ document.getElementById('wizard-overlay').style.display='none'; }
+
+function renderWizardStep(){
+  const q=WIZARD_QUESTIONS[wizardStep], total=WIZARD_QUESTIONS.length;
+  const prog=document.getElementById('wizard-progress');
+  prog.innerHTML='';
+  for(let i=0;i<total;i++) prog.innerHTML+=`<div class="progress-dot ${i<wizardStep?'done':i===wizardStep?'active':''}"></div>`;
+  document.getElementById('wizard-back-btn').style.display=wizardStep>0?'block':'none';
+  document.getElementById('wizard-next-btn').textContent=wizardStep===total-1?'Diseñar mi rutina ✨':'Siguiente →';
+  const saved=wizardAnswers[q.id]||'';
+  let h=`<div class="wizard-q-title">${q.title}</div>`;
+  if(q.sub) h+=`<div class="wizard-q-sub">${q.sub}</div>`;
+  q.options.forEach(opt=>{ h+=`<div class="wizard-option ${saved===opt?'selected':''}" onclick="selectWizOpt(this,'${q.id}','${opt.replace(/'/g,"\'")}')">${opt}</div>`; });
+  const textVal=q.options.length===0||!q.options.includes(saved)?saved:'';
+  h+=`<textarea id="wt-${q.id}" placeholder="${q.options.length===0?'Escribe tu respuesta...':'O escribe tu propia respuesta...'}" rows="2" oninput="selectFreeText('${q.id}',this.value)" style="margin-top:10px;width:100%;border:1.5px solid rgba(61,107,79,0.2);border-radius:12px;padding:10px 14px;font-family:'DM Sans',sans-serif;font-size:14px;resize:none;outline:none;background:var(--white);color:var(--text)">${textVal}</textarea>`;
+  document.getElementById('wizard-q-container').innerHTML=h;
+}
+
+function selectWizOpt(el,qid,val){
+  document.querySelectorAll('.wizard-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  wizardAnswers[qid]=val;
+  const ta=document.getElementById('wt-'+qid); if(ta) ta.value='';
+}
+function selectFreeText(qid,val){
+  wizardAnswers[qid]=val;
+  document.querySelectorAll('.wizard-option').forEach(o=>o.classList.remove('selected'));
+}
+function wizardBack(){ if(wizardStep>0){wizardStep--;renderWizardStep();} }
+async function wizardNext(){
+  const q=WIZARD_QUESTIONS[wizardStep];
+  const answer=wizardAnswers[q.id];
+  if(!answer||!answer.trim()){
+    const ta=document.getElementById('wt-'+q.id);
+    if(ta){ta.style.borderColor='var(--rose-deep)';setTimeout(()=>{ta.style.borderColor='';},1500);}
+    return;
+  }
+  if(wizardStep<WIZARD_QUESTIONS.length-1){wizardStep++;renderWizardStep();}
+  else await generateRoutineWithAI();
+}
+
+async function generateRoutineWithAI(){
+  document.getElementById('wizard-questions').style.display='none';
+  const ld=document.getElementById('wizard-loading');
+  ld.style.display='flex'; ld.style.flexDirection='column'; ld.style.alignItems='center'; ld.style.justifyContent='center'; ld.style.height='100vh';
+  const msgs=['Analizando tu tipo de piel...','Investigando ingredientes ideales...','Comprobando compatibilidades...','Diseñando tu rutina de mañana...','Diseñando tu rutina de noche...','Casi lista tu rutina perfecta...'];
+  let mi=0;
+  const intv=setInterval(()=>{ document.getElementById('wizard-loading-msg').textContent=msgs[mi++%msgs.length]; },1800);
+  if(wizardAnswers.skintype) APP.profile.skintype=wizardAnswers.skintype;
+  if(wizardAnswers.location) APP.profile.location=wizardAnswers.location;
+  if(wizardAnswers.health&&wizardAnswers.health!=='Ninguna') APP.profile.allergies=wizardAnswers.health;
+  const prompt=`Eres Paulita, experta en skincare. Diseña una rutina personalizada:
+Tipo de piel: ${wizardAnswers.skintype||'No especificado'}
+Preocupación: ${wizardAnswers.concern||'No especificado'}
+Reacción al sol: ${wizardAnswers.sun||'No especificado'}
+Alergias/condiciones: ${wizardAnswers.health||'Ninguna'}
+Tiempo disponible: ${wizardAnswers.time||'No especificado'}
+Presupuesto: ${wizardAnswers.budget||'No especificado'}
+Ubicación: ${wizardAnswers.location||'No especificado'}
+REGLAS INNEGOCIABLES:
+1. TODA rutina EMPIEZA con: 0a) Aceite limpiador, 0b) Jabón limpiador suave
+2. Nunca retinol + exfoliante la misma noche
+3. Vitamina C solo AM, retinol solo PM
+4. SPF siempre último en AM
+5. Si hay alergias o enfermedades, excluye ingredientes contraindicados
+6. Adapta productos a la ubicación indicada
+Responde SOLO con JSON válido sin texto adicional:
+{"morning":[{"emoji":"🧴","name":"Nombre producto","desc":"Descripción breve","why":"Por qué es importante"}],"night":[{"emoji":"🌙","name":"Nombre producto","desc":"Descripción breve","why":"Por qué es importante"}],"skinProfile":"Resumen breve del perfil"}`;
+  try{
+    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    clearInterval(intv);
+    const text=data.content?.[0]?.text||'';
+    let routine;
+    try{routine=JSON.parse(text.replace(/```json|```/g,'').trim());}catch(e){routine=null;}
+    if(routine&&routine.morning&&routine.night){
+      APP.generatedRoutine=routine;
+      const d=lsGet(); d.generatedRoutine=routine; lsSet(d);
+      fbSet('routines','generated',{routine,uid:userId});
+      closeWizard();
+      document.getElementById('routine-empty').style.display='none';
+      document.getElementById('routine-active').style.display='block';
+      renderSteps(); renderShoppingList();
+      showToast('Rutina diseñada por Paulita IA 💚');
+    } else {
+      clearInterval(intv);
+      alert('Hubo un problema. Inténtalo de nuevo.');
+      closeWizard();
+    }
+  }catch(e){clearInterval(intv);alert('Error de conexión.');closeWizard();}
+}
+
+function renderSteps(){
+  const routine=APP.generatedRoutine; if(!routine) return;
+  const steps=routine[currentTime]||[];
+  const list=document.getElementById('step-list'); if(!list) return;
+  list.innerHTML='';
+  steps.forEach((s,i)=>{
+    const done=completedSteps[currentTime].has(i);
+    const owned=APP.ownedProducts&&APP.ownedProducts[currentTime+i];
+    list.innerHTML+=`<div class="step-item ${done?'done':''}">
+      <div onclick="toggleStep(${i})" style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer">
+        <div class="step-num">${done?'✓':s.emoji||'🧴'}</div>
+        <div class="step-info">
+          <div class="step-name">${s.name}</div>
+          <div class="step-desc">${s.desc||''}</div>
+          ${s.why&&!done?`<div style="font-size:10px;color:var(--forest-light);margin-top:3px;line-height:1.3">🔬 ${s.why}</div>`:''}
+        </div>
+        <div class="step-check">${done?'✓':''}</div>
+      </div>
+      <div class="step-badges">
+        <button class="step-badge ${owned?'badge-have owned':'badge-have'}" onclick="toggleOwned('${currentTime}',${i},this)">${owned?'✓ Lo tengo':'Lo tengo'}</button>
+        ${!owned?`<button class="step-badge badge-cart" onclick="addToCart('${currentTime}',${i},'${s.name.replace(/'/g,"\\'")}')">+ Lista de compra</button>`:''}
+      </div>
+    </div>`;
+  });
+  const te=document.getElementById('routine-card-title'); if(te) te.children[0].textContent=currentTime==='morning'?'☀️ Rutina Mañana':'🌙 Rutina Noche';
+  const ce=document.getElementById('routine-step-count'); if(ce) ce.textContent=completedSteps[currentTime].size+'/'+steps.length;
+}
+
+function toggleOwned(period,idx,btn){
+  if(!APP.ownedProducts) APP.ownedProducts={};
+  APP.ownedProducts[period+idx]=!APP.ownedProducts[period+idx];
+  const d=lsGet(); d.ownedProducts=APP.ownedProducts; lsSet(d);
+  renderSteps(); renderShoppingList();
+}
+
+function addToCart(period,idx,name){
+  if(!APP.shoppingCart) APP.shoppingCart=[];
+  if(!APP.shoppingCart.find(i=>i.name===name)){
+    APP.shoppingCart.push({name,period,idx});
+    const d=lsGet(); d.shoppingCart=APP.shoppingCart; lsSet(d);
+  }
+  renderShoppingList(); showToast('Añadido a lista de compra 🛒');
+}
+
+function renderShoppingList(){
+  const cart=APP.shoppingCart||[];
+  const card=document.getElementById('shopping-list-card');
+  const items=document.getElementById('shopping-list-items');
+  if(!card||!items) return;
+  if(!cart.length){card.style.display='none';return;}
+  card.style.display='block';
+  items.innerHTML=cart.map((item,i)=>`<div class="shop-item">
+    <div class="shop-item-name">${item.name}</div>
+    <div class="shop-item-actions">
+      <button class="shop-btn shop-btn-find" onclick="findStores('${item.name.replace(/'/g,"\\'")}')">🔍 Buscar tiendas</button>
+      <button class="shop-btn shop-btn-have" onclick="markCartItemOwned(${i},'${item.period}',${item.idx})">✓ Ya lo tengo</button>
+    </div>
+  </div>`).join('');
+}
+
+async function findStores(productName){
+  openModal('store-modal');
+  document.getElementById('store-modal-title').textContent=productName;
+  document.getElementById('store-results').innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted)">Buscando tiendas...</div>';
+  const location=APP.profile.location||'España';
+  const prompt=`Busca tiendas donde comprar "${productName}" en ${location}. Lista 4 opciones reales con precio aproximado y URL. Responde SOLO con JSON sin texto adicional: [{"store":"Nombre","price":"precio aprox","url":"https://...","type":"online"}]`;
+  try{
+    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'[]';
+    const stores=JSON.parse(text.replace(/```json|```/g,'').trim());
+    document.getElementById('store-results').innerHTML=stores.map(s=>`<a href="${s.url}" target="_blank" class="store-item"><div><div class="store-name">${s.store}</div><div style="font-size:11px;color:var(--text-muted)">${s.type==='online'?'🌐 Online':'🏪 Física'}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="store-price">${s.price}</div><div class="store-arrow">→</div></div></a>`).join('');
+  }catch(e){document.getElementById('store-results').innerHTML='<div style="padding:16px;color:var(--text-muted)">No se pudo obtener información. Inténtalo de nuevo.</div>';}
+}
+
+function markCartItemOwned(cartIdx,period,stepIdx){
+  if(!APP.ownedProducts) APP.ownedProducts={};
+  APP.ownedProducts[period+stepIdx]=true;
+  APP.shoppingCart.splice(cartIdx,1);
+  const d=lsGet(); d.ownedProducts=APP.ownedProducts; d.shoppingCart=APP.shoppingCart; lsSet(d);
+  renderSteps(); renderShoppingList(); showToast('Producto añadido a tu rutina 💚');
+}
+
   renderChatWelcome();
   updateDynamicChips();
   setupKeyboard();
   renderPresets();
   updateSwatches('#3d6b4f','#2c5038','#6a9d7a','#f2c4ce');
   initHome();
-  renderSteps();
+  if (APP.generatedRoutine) {
+    document.getElementById('routine-empty') && (document.getElementById('routine-empty').style.display='none');
+    document.getElementById('routine-active') && (document.getElementById('routine-active').style.display='block');
+    renderSteps();
+    renderShoppingList();
+  } else {
+    document.getElementById('routine-empty') && (document.getElementById('routine-empty').style.display='block');
+    document.getElementById('routine-active') && (document.getElementById('routine-active').style.display='none');
+  }
   renderProducts();
   renderLogs();
   updateSkinStats();
@@ -1897,5 +2222,15 @@ function toggleNotifMaster() {
   setInterval(initHome, 60000);
 })();
 </script>
+
+<!-- STORE MODAL -->
+<div class="modal-overlay" id="store-modal" onclick="closeModalOutside(event,'store-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="store-modal-title">Buscando tiendas...</div>
+    <div id="store-results"></div>
+    <button class="btn btn-ghost" style="margin-top:14px" onclick="closeModal('store-modal')">Cerrar</button>
+  </div>
+</div>
 </body>
 </html>
