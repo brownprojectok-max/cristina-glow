@@ -61,6 +61,12 @@ body {
   display: flex;
 }
 
+/* Ocultar bottom nav cuando el chat está activo */
+#screen-ai.active ~ .bottom-nav,
+body.chat-active .bottom-nav {
+  display: none !important;
+}
+
 .screen.active { 
   display: flex; 
   height: 100dvh;
@@ -592,6 +598,16 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
         </svg>
       </button>
     </div>
+  </div>
+
+  <!-- Mini nav inferior — solo en pantalla chat -->
+  <div style="flex-shrink:0;background:var(--white);border-top:1px solid rgba(61,107,79,0.1);display:flex;padding:8px 0 max(20px,env(safe-area-inset-bottom));">
+    <div class="nav-item" onclick="goTo('home',this)"><div class="nav-icon">🏠</div><div class="nav-label">Inicio</div></div>
+    <div class="nav-item" onclick="goTo('routine',this)"><div class="nav-icon">📋</div><div class="nav-label">Rutina</div></div>
+    <div class="nav-item active"><div class="nav-icon">✨</div><div class="nav-label" style="color:var(--forest);font-weight:500">Paulita IA</div></div>
+    <div class="nav-item" onclick="goTo('products',this)"><div class="nav-icon">🧴</div><div class="nav-label">Productos</div></div>
+    <div class="nav-item" onclick="goTo('calendar',this)"><div class="nav-icon">🗓️</div><div class="nav-label">Historial</div></div>
+    <div class="nav-item" onclick="goTo('settings',this)"><div class="nav-icon">⚙️</div><div class="nav-label">Ajustes</div></div>
   </div>
 </div>
 
@@ -1902,6 +1918,15 @@ function goTo(screen, navEl) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('screen-'+screen).classList.add('active');
   if(navEl) navEl.classList.add('active');
+
+  // Mostrar/ocultar bottom nav — en chat se oculta para dar espacio
+  const nav = document.querySelector('.bottom-nav');
+  if (screen === 'ai') {
+    if (nav) nav.style.display = 'none';
+  } else {
+    if (nav) nav.style.display = '';
+  }
+
   if(screen==='routine') {
     if (APP.generatedRoutine) {
       document.getElementById('routine-empty').style.display='none';
