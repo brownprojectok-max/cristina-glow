@@ -2199,43 +2199,52 @@ function buildStoreLinks(productName) {
 async function findStores(productName){
   openModal('store-modal');
   document.getElementById('store-modal-title').textContent = productName;
-  document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando en tiendas reales...</div>';
+  document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando precios reales...</div>';
 
   const loc = APP.userLocation;
-  const country = loc && loc.country ? loc.country : 'España';
-  const searchQuery = productName + ' comprar precio';
+  const location = loc && loc.label ? loc.label : 'Spain';
 
   try {
-    const url = '/api/search?q=' + encodeURIComponent(searchQuery) + '&gl=' + getCountryCode(country);
+    const url = '/api/search?q=' + encodeURIComponent(productName) + '&location=' + encodeURIComponent(location);
     const res = await fetch(url);
     const data = await res.json();
 
-    if (!data.items || !data.items.length) {
+    if (data.error || !data.results || !data.results.length) {
       renderStoreResults(buildStoreLinks(productName), productName);
       return;
     }
 
+    // Parse Google Shopping results from SerpAPI
     const seen = new Set();
-    const realStores = data.items
-      .filter(item => {
+    const stores = data.results
+      .filter(r => {
+        if (!r.link) return false;
         try {
-          const domain = new URL(item.link).hostname;
+          const domain = new URL(r.link).hostname;
           if (seen.has(domain)) return false;
           seen.add(domain);
           return true;
         } catch(e) { return false; }
       })
-      .map(item => {
-        const priceMatch = item.snippet && item.snippet.match(/[\d]+[,.][\d]{2}\s*€/);
-        const price = priceMatch ? priceMatch[0] : 'Ver precio';
-        const domain = new URL(item.link).hostname.replace('www.','');
-        const siteName = item.pagemap && item.pagemap.metatags && item.pagemap.metatags[0] && item.pagemap.metatags[0]['og:site_name'];
-        const storeName = siteName || (domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1));
-        return { store: storeName, price: price, url: item.link, type: 'online' };
+      .slice(0, 5)
+      .map(r => {
+        const domain = new URL(r.link).hostname.replace('www.','');
+        const storeName = r.source || (domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1));
+        const price = r.price || 'Ver precio';
+        return {
+          store: storeName,
+          price: price,
+          url: r.link,
+          type: 'online',
+          thumbnail: r.thumbnail || null
+        };
       });
 
-    const base = buildStoreLinks(productName);
-    renderStoreResults([base[0], ...realStores], productName);
+    if (stores.length) {
+      renderStoreResults(stores, productName);
+    } else {
+      renderStoreResults(buildStoreLinks(productName), productName);
+    }
 
   } catch(e) {
     console.error('Search error:', e);
@@ -2263,10 +2272,11 @@ function renderStoreResults(stores, productName) {
   const unique = stores.filter(s => { if(seen.has(s.store)) return false; seen.add(s.store); return true; });
   el.innerHTML = unique.map(s => `
     <a href="${s.url}" target="_blank" rel="noopener" class="store-item">
-      <div style="flex:1">
+      ${s.thumbnail ? `<img src="${s.thumbnail}" style="width:40px;height:40px;object-fit:contain;border-radius:8px;flex-shrink:0;margin-right:4px" onerror="this.style.display='none'">` : ''}
+      <div style="flex:1;min-width:0">
         <div class="store-name">${s.store}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-          ${s.badge ? '<span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : (s.type==='online' ? '🌐 Online' : '🏪 Tienda física')}
+          ${s.badge ? '<span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : '🌐 Online'}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
