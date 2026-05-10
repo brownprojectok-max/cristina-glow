@@ -339,8 +339,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
 ══════════════════════════════════════ -->
 <div class="screen active" id="screen-home">
   <div class="app-header">
-    <div class="greeting-small" id="time-label">Buenos días</div>
-    <div class="greeting-name" id="greeting-name">CRISTINA ✨</div>
+    <div class="greeting-name" id="greeting-name">BUENOS DÍAS ✨</div>
     <div class="greeting-msg" id="greeting-msg">Cuida tu piel hoy, lo mereces</div>
     <div class="header-badge"><div class="dot-live"></div><span id="today-date">Hoy</span></div>
   </div>
@@ -442,7 +441,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   <div id="ai-body" style="flex:1;display:flex;flex-direction:column;padding:12px 20px 0;min-height:0;overflow:hidden;padding-bottom:70px">
     <div class="quick-chips" id="quick-chips" style="flex-shrink:0;margin-bottom:8px"></div>
     <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:10px;padding-bottom:8px;min-height:0">
-      <div class="msg msg-ai" id="chat-welcome"></div>
+      
     </div>
     <div style="flex-shrink:0;padding:10px 0 12px;border-top:1px solid rgba(61,107,79,0.1);background:var(--cream)">
       <div style="display:flex;gap:10px;align-items:flex-end">
@@ -515,13 +514,12 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
   </div>
   <div class="content">
 
-    <div class="install-banner" style="display:none">
-      <div style="font-size:28px;flex-shrink:0">📲</div>
-      <div class="install-text"><h4>Instalar en iPhone</h4><p>Añade la app a tu pantalla de inicio</p></div>
-      <div style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.7)">→</div>
-    </div>
-
-    
+    <div class="card">
+      <div class="card-title"><div class="card-title-left">🔔 Recordatorios</div></div>
+      <div class="toggle-row" style="border-bottom:1.5px solid rgba(61,107,79,0.12);margin-bottom:8px;padding-bottom:14px">
+        <div class="toggle-label" style="font-weight:600">Activar notificaciones</div>
+        <div class="toggle" id="tog-notif-master" onclick="toggleNotifMaster()"></div>
+      </div>
       <div class="toggle-row">
         <div style="flex:1">
           <div class="toggle-label">☀️ Rutina mañana</div>
@@ -556,7 +554,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
       <div class="profile-row" id="profile-row-name">
         <div class="profile-label">Nombre</div>
         <div class="edit-field">
-          <div class="edit-val" id="pv-name">Cristina</div>
+          <div class="edit-val" id="pv-name">–</div>
           <div class="edit-btn" onclick="startEdit('name')">✏️</div>
         </div>
         <div class="edit-input-wrap" id="pe-name" style="display:none;margin-top:8px">
@@ -569,7 +567,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
       <div class="profile-row" id="profile-row-skintype">
         <div class="profile-label">Tipo de piel</div>
         <div class="edit-field">
-          <div class="edit-val" id="pv-skintype">Normal</div>
+          <div class="edit-val" id="pv-skintype">–</div>
           <div class="edit-btn" onclick="startEdit('skintype')">✏️</div>
         </div>
         <div class="edit-input-wrap" id="pe-skintype" style="display:none;margin-top:8px">
@@ -588,7 +586,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
       <div class="profile-row">
         <div class="profile-label">Ubicación</div>
         <div class="edit-field">
-          <div class="edit-val" id="pv-location">Madrid 🇪🇸</div>
+          <div class="edit-val" id="pv-location">–</div>
           <div class="edit-btn" onclick="startEdit('location')">✏️</div>
         </div>
         <div class="edit-input-wrap" id="pe-location" style="display:none;margin-top:8px">
@@ -601,7 +599,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
       <div class="profile-row">
         <div class="profile-label">Objetivo principal</div>
         <div class="edit-field">
-          <div class="edit-val" id="pv-goal">Luminosidad y firmeza</div>
+          <div class="edit-val" id="pv-goal">–</div>
           <div class="edit-btn" onclick="startEdit('goal')">✏️</div>
         </div>
         <div class="edit-input-wrap" id="pe-goal" style="display:none;margin-top:8px">
@@ -634,7 +632,7 @@ select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.or
       <div class="profile-row">
         <div class="profile-label">Sensibilidades / alergias</div>
         <div class="edit-field">
-          <div class="edit-val" id="pv-allergies">Ninguna conocida</div>
+          <div class="edit-val" id="pv-allergies">–</div>
           <div class="edit-btn" onclick="startEdit('allergies')">✏️</div>
         </div>
         <div class="edit-input-wrap" id="pe-allergies" style="display:none;margin-top:8px">
@@ -914,7 +912,7 @@ function showToast(msg) {
 // DATA STATE
 // ─────────────────────────────────────
 let APP = {
-  profile: { name:'Cristina', skintype:'Normal', location:'Madrid 🇪🇸', goal:'Luminosidad y firmeza', age:'–', allergies:'Ninguna conocida' },
+  profile: { name:'', skintype:'', location:'', goal:'', age:'', allergies:'' },
   logs: [],
   products: [],
   stepsCompleted: { morning: [], night: [], date: '' },
@@ -1029,10 +1027,16 @@ function getGreeting() {
 
 function initHome() {
   const g = getGreeting();
-  const tl = document.getElementById('time-label');
-  if(tl) tl.textContent = g.label;
   const gm = document.getElementById('greeting-msg');
   if(gm) gm.textContent = g.msg;
+  // Nombre solo si está registrado
+  const gn = document.getElementById('greeting-name');
+  if(gn) {
+    const name = APP.profile.name && APP.profile.name.trim();
+    const h2 = new Date().getHours();
+    const saludo = h2<14 ? 'BUENOS DÍAS' : h2<21 ? 'BUENAS TARDES' : 'BUENAS NOCHES';
+    gn.textContent = name ? saludo+', '+name.toUpperCase()+' ✨' : saludo+' ✨';
+  }
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const now = new Date();
@@ -1429,7 +1433,7 @@ function selectCalDay(d) {
 // ─────────────────────────────────────
 // AI CHAT — llamada al endpoint de Anthropic
 // ─────────────────────────────────────
-const AI_SYSTEM = `Eres una asesora experta en dermocosmética y skincare llamada "Glow AI". Tienes formación en dermatología cosmética y conoces a fondo la ciencia detrás de los ingredientes activos. Tu usuaria se llama Cristina, tiene piel normal, vive en Madrid (España).
+const AI_SYSTEM = `Eres una asesora experta en dermocosmética y skincare llamada "Glow AI". Tienes formación en dermatología cosmética y conoces a fondo la ciencia detrás de los ingredientes activos. Los datos de tu usuaria los obtienes del perfil. Si el nombre está vacío, no uses ningún nombre. Si tiene nombre registrado, úsalo solo ocasionalmente y de forma natural, nunca al inicio de cada mensaje.
 
 Su rutina científicamente fundamentada:
 ━━ MAÑANA (AM) ━━
@@ -1569,18 +1573,21 @@ async function saveProfileField(field) {
   const input = document.getElementById('pi-'+field);
   let val = input.value.trim() || '–';
   if (field==='location' && val!=='–' && !val.includes('🇪🇸') && val.toLowerCase().includes('madrid')) val+=' 🇪🇸';
-  APP.profile[field] = val;
+  APP.profile[field] = val === '–' ? '' : val;
   document.getElementById('pv-'+field).textContent = val;
   document.getElementById('pe-'+field).style.display='none';
   await fbSet('profiles','main',{ ...APP.profile, uid:userId });
   const d=lsGet(); d.profile=APP.profile; lsSet(d);
+  // Actualizar header y chat welcome con nuevo nombre
+  initHome();
+  renderChatWelcome();
   showToast('✅ Perfil actualizado');
 }
 
 function updateProfileUI() {
   Object.keys(APP.profile).forEach(k=>{
     const el = document.getElementById('pv-'+k);
-    if (el) el.textContent = APP.profile[k];
+    if (el) el.textContent = APP.profile[k] || '–';
   });
 }
 
