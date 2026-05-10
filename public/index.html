@@ -2189,16 +2189,11 @@ function buildStoreLinks(productName) {
   else if (country.includes('france')) douglasUrl = `https://www.douglas.fr/fr/search?q=${q}`;
   else if (country.includes('italy') || country.includes('italia')) douglasUrl = `https://www.douglas.it/it/search?q=${q}`;
 
-  const stores = [
-    { store:'Google Shopping', price:'Ver y comparar precios →', url: googleShoppingUrl, type:'online', badge:'💰 Mejor precio' },
-    { store:'Amazon', price:'Ver precio en Amazon →', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
-    { store:'Notino', price:'Ver precio en Notino →', url: notinoUrl, type:'online', badge:'✨ Cosmética' },
+  // Solo los que SIEMPRE funcionan con búsqueda real
+  return [
+    { store:'Google Shopping', price:'Comparar precios', url: googleShoppingUrl, type:'online', badge:'💰 Todos los precios' },
+    { store:'Amazon', price:'Ver en Amazon', url: amazonUrl, type:'online', badge:'⚡ Envío rápido' },
   ];
-
-  if (sephoraUrl) stores.push({ store:'Sephora', price:'Ver precio en Sephora →', url: sephoraUrl, type:'online', badge:'🛍️ Beauty' });
-  if (douglasUrl) stores.push({ store:'Douglas', price:'Ver precio en Douglas →', url: douglasUrl, type:'online', badge:'💄 Perfumería' });
-
-  return stores;
 }
 
 async function findStores(productName){
@@ -2255,14 +2250,12 @@ function renderStoreResults(stores, productName) {
       <div style="flex:1">
         <div class="store-name">${s.store}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-          ${s.type==='online' ? '🌐 Online' : '🏪 Tienda física'}
-          ${s.distance && s.distance !== 'N/A' && s.distance !== 'Online' ? ' · '+s.distance : ''}
-          ${s.badge ? ' · <span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : ''}
+          ${s.badge ? '<span style="color:var(--forest);font-weight:500">'+s.badge+'</span>' : (s.type==='online' ? '🌐 Online' : '🏪 Tienda física')}
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <div class="store-price" style="font-size:12px;color:var(--forest)">${s.price}</div>
-        <div class="store-arrow">→</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${s.price ? `<div style="font-size:13px;font-weight:600;color:var(--forest)">${s.price}</div>` : ''}
+        <div style="font-size:18px;color:var(--text-muted)">›</div>
       </div>
     </a>`).join('');
 }
