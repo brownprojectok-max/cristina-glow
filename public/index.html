@@ -1950,8 +1950,7 @@ const WIZARD_QUESTIONS = [
   {id:'sun',title:'¿Cómo reacciona tu piel al sol?',sub:'',options:['Se enrojece con facilidad','Se broncea bien','Reacción mixta','Sin problemas'],multi:false},
   {id:'health',title:'¿Tienes alergias, sensibilidades o condiciones de salud?',sub:'Puedes elegir varias. Si tienes alguna enfermedad específica, escríbela abajo',options:['Ninguna','Alergia a fragancias','Alergia a alcohol','Rosácea','Eccema','Psoriasis'],multi:true},
   {id:'time',title:'¿Cuánto tiempo tienes para tu rutina diaria?',sub:'',options:['Menos de 5 minutos','Unos 10 minutos','20 minutos o más'],multi:false},
-  {id:'budget',title:'¿Cuál es tu presupuesto para skincare?',sub:'',options:['Básico (productos accesibles)','Medio (farmacia y beauty)','Sin límite (marcas premium)'],multi:false},
-  {id:'location',title:'¿Dónde vives?',sub:'Ciudad y país — para adaptar productos y precios reales',options:[],multi:false}
+  {id:'budget',title:'¿Cuál es tu presupuesto para skincare?',sub:'',options:['Básico (productos accesibles)','Medio (farmacia y beauty)','Sin límite (marcas premium)'],multi:false}
 ];
 let wizardStep=0, wizardAnswers={};
 
@@ -2036,8 +2035,7 @@ async function generateRoutineWithAI(){
   let mi=0;
   const intv=setInterval(()=>{ document.getElementById('wizard-loading-msg').textContent=msgs[mi++%msgs.length]; },1800);
   if(wizardAnswers.skintype) APP.profile.skintype=wizardAnswers.skintype;
-  if(wizardAnswers.location) APP.profile.location=wizardAnswers.location;
-  if(wizardAnswers.health&&wizardAnswers.health!=='Ninguna') APP.profile.allergies=wizardAnswers.health;
+  if(wizardAnswers.health&&!['Ninguna'].includes(wizardAnswers.health)) APP.profile.allergies=Array.isArray(wizardAnswers.health)?wizardAnswers.health.join(', '):wizardAnswers.health;
   const prompt=`Eres Paulita, experta en skincare. Diseña una rutina personalizada:
 Tipo de piel: ${wizardAnswers.skintype||'No especificado'}
 Preocupación: ${wizardAnswers.concern||'No especificado'}
@@ -2142,17 +2140,58 @@ function renderShoppingList(){
 
 async function findStores(productName){
   openModal('store-modal');
-  document.getElementById('store-modal-title').textContent=productName;
-  document.getElementById('store-results').innerHTML='<div style="text-align:center;padding:20px;color:var(--text-muted)">Buscando tiendas...</div>';
-  const location=APP.profile.location||'España';
-  const prompt=`Busca tiendas donde comprar "${productName}" en ${location}. Lista 4 opciones reales con precio aproximado y URL. Responde SOLO con JSON sin texto adicional: [{"store":"Nombre","price":"precio aprox","url":"https://...","type":"online"}]`;
-  try{
-    const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const text=data.content?.[0]?.text||'[]';
-    const stores=JSON.parse(text.replace(/```json|```/g,'').trim());
-    document.getElementById('store-results').innerHTML=stores.map(s=>`<a href="${s.url}" target="_blank" class="store-item"><div><div class="store-name">${s.store}</div><div style="font-size:11px;color:var(--text-muted)">${s.type==='online'?'🌐 Online':'🏪 Física'}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="store-price">${s.price}</div><div class="store-arrow">→</div></div></a>`).join('');
-  }catch(e){document.getElementById('store-results').innerHTML='<div style="padding:16px;color:var(--text-muted)">No se pudo obtener información. Inténtalo de nuevo.</div>';}
+  document.getElementById('store-modal-title').textContent = productName;
+  document.getElementById('store-results').innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">🔍 Buscando tiendas...</div>';
+
+  // Build location context
+  let locationCtx = '';
+  if (APP.userLocation && APP.userLocation.label) {
+    locationCtx = `La usuaria está en ${APP.userLocation.label} (coordenadas: ${APP.userLocation.lat?.toFixed(4)}, ${APP.userLocation.lng?.toFixed(4)}).`;
+  } else if (APP.profile.location && APP.profile.location !== '–') {
+    locationCtx = `La usuaria está en ${APP.profile.location}.`;
+  } else {
+    locationCtx = 'Ubicación desconocida — recomienda tiendas online internacionales.';
+  }
+
+  const prompt = `${locationCtx}
+Busca dónde comprar "${productName}" cerca de esa ubicación. Devuelve 4-5 opciones reales: tiendas físicas cercanas si las hay, y tiendas online con envío a esa zona.
+IMPORTANTE: Cada URL debe llevar DIRECTAMENTE a la página del producto o búsqueda del producto en esa tienda, no a la página principal.
+Responde SOLO con JSON válido sin texto adicional:
+[{"store":"Nombre tienda","price":"precio estimado","url":"https://tienda.com/busqueda?q=producto","type":"online o fisica","distance":"distancia estimada si es física"}]`;
+
+  try {
+    const res = await fetch('/api/ai', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-haiku-4-5-20251001', max_tokens:600, messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '[]';
+    let stores;
+    try { stores = JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch(e) { stores = []; }
+
+    if (!stores.length) {
+      document.getElementById('store-results').innerHTML = '<div style="padding:16px;color:var(--text-muted)">No encontré tiendas. Activa la ubicación o inténtalo de nuevo.</div>';
+      return;
+    }
+
+    document.getElementById('store-results').innerHTML = stores.map(s => `
+      <a href="${s.url}" target="_blank" rel="noopener" class="store-item">
+        <div style="flex:1">
+          <div class="store-name">${s.store}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+            ${s.type==='online' ? '🌐 Online' : '🏪 Tienda física'}
+            ${s.distance ? ' · '+s.distance : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div class="store-price">${s.price}</div>
+          <div class="store-arrow">→</div>
+        </div>
+      </a>`).join('');
+  } catch(e) {
+    document.getElementById('store-results').innerHTML = '<div style="padding:16px;color:var(--text-muted)">Error de conexión. Inténtalo de nuevo.</div>';
+  }
 }
 
 function markCartItemOwned(cartIdx,period,stepIdx){
@@ -2163,6 +2202,41 @@ function markCartItemOwned(cartIdx,period,stepIdx){
   renderSteps(); renderShoppingList(); showToast('Producto añadido a tu rutina 💚');
 }
 
+
+
+// ══════════════════════════════════════════
+// GEOLOCATION
+// ══════════════════════════════════════════
+function requestUserLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      APP.userLocation = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      };
+      // Reverse geocode to get city/country
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+        .then(r => r.json())
+        .then(data => {
+          const city = data.address.city || data.address.town || data.address.village || '';
+          const country = data.address.country || '';
+          APP.userLocation.city = city;
+          APP.userLocation.country = country;
+          APP.userLocation.label = [city, country].filter(Boolean).join(', ');
+          // Update profile location if empty
+          if (!APP.profile.location || APP.profile.location === '–' || APP.profile.location === '') {
+            APP.profile.location = APP.userLocation.label;
+            const el = document.getElementById('pv-location');
+            if (el) el.textContent = APP.userLocation.label;
+            const d = lsGet(); d.profile = APP.profile; lsSet(d);
+          }
+        }).catch(()=>{});
+    },
+    err => { console.log('Geolocation denied'); },
+    { timeout: 10000 }
+  );
+}
 
 (function init() {
   // Load from localStorage first (instant)
@@ -2209,6 +2283,8 @@ function markCartItemOwned(cartIdx,period,stepIdx){
   initFirebase();
 
   setInterval(initHome, 60000);
+  // Request geolocation
+  requestUserLocation();
 })();
 </script>
 
